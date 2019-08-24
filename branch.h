@@ -2,11 +2,4 @@
 
 #include <string>
 
-#include "id.h"
-
-class Branch
-{
-public:
-	std::wstring	description;
-	Id				*commit;
-};
+void create_branch(const std::wstring &name, const std::wstring &object_id, bool overwrite=false);

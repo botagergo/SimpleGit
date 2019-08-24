@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?>
+﻿<?xml version="1.0" encoding="utf-8"?>
 <Project DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup Label="ProjectConfigurations">
     <ProjectConfiguration Include="Debug|Win32">
@@ -99,13 +99,15 @@
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <ClCompile>
-      <PrecompiledHeader>
-      </PrecompiledHeader>
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
       <WarningLevel>Level3</WarningLevel>
       <Optimization>Disabled</Optimization>
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
+      <LanguageStandard>stdcpp17</LanguageStandard>
+      <AdditionalIncludeDirectories>d:\Boost\include\boost-1_70\;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalOptions>/D _SILENCE_CXX17_CODECVT_HEADER_DEPRECATION_WARNING /D _CRT_SECURE_NO_WARNINGS %(AdditionalOptions)</AdditionalOptions>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -151,17 +153,37 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="blob.cpp" />
+    <ClCompile Include="branch.cpp" />
+    <ClCompile Include="commands.cpp" />
+    <ClCompile Include="commit.cpp" />
+    <ClCompile Include="filesystem.cpp" />
+    <ClCompile Include="globals.cpp" />
+    <ClCompile Include="helper.cpp" />
+    <ClCompile Include="index.cpp" />
+    <ClCompile Include="object.cpp" />
+    <ClCompile Include="object_file_writer.cpp" />
+    <ClCompile Include="ref.cpp" />
+    <ClCompile Include="sha1.cpp" />
     <ClCompile Include="SimpleGit.cpp" />
+    <ClCompile Include="tag.cpp" />
+    <ClCompile Include="tree.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="base.h" />
     <ClInclude Include="blob.h" />
     <ClInclude Include="branch.h" />
+    <ClInclude Include="commands.h" />
     <ClInclude Include="commit.h" />
-    <ClInclude Include="id.h" />
-    <ClInclude Include="name.h" />
+    <ClInclude Include="error.h" />
+    <ClInclude Include="exception.h" />
+    <ClInclude Include="filesystem.h" />
+    <ClInclude Include="globals.h" />
+    <ClInclude Include="helper.h" />
+    <ClInclude Include="index.h" />
     <ClInclude Include="object.h" />
+    <ClInclude Include="object_file_writer.h" />
     <ClInclude Include="ref.h" />
+    <ClInclude Include="sha1.h" />
     <ClInclude Include="tag.h" />
     <ClInclude Include="tree.h" />
   </ItemGroup>

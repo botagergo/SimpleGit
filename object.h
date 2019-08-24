@@ -1,9 +1,8 @@
 #pragma once
 
-#include "base.h"
-
-class Object
+struct ObjectHeader
 {
-public:
-	ObjectId id;
+	std::wstring object_kind;
 };
+
+ObjectHeader parse_object_header(std::wistream& stream);

@@ -2,17 +2,8 @@
 
 #include <chrono>
 #include <string>
+#include <vector>
 
 #include "object.h"
-#include "tree.h"
 
-class Commit : public Object
-{
-	std::wstring	author;
-	std::wstring	commiter;
-	std::wstring	message;
-	//TODO: add date and time
-	
-	Commit			*parent;
-	Tree			*tree;
-};
+std::wstring create_commit(const std::wstring &tree_id, const std::vector<std::wstring> &parents, const std::wstring &author, const std::wstring &committer, const std::wstring &message);
