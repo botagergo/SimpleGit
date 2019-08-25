@@ -1,19 +1,27 @@
 #include <filesystem>
+#include <map>
 
 #include "globals.h"
 
-namespace Config
+namespace Globals
 {
-	std::filesystem::path			SimpleGitDir;
-	std::filesystem::path			ObjectDir;
-	std::filesystem::path			RefDir;
-	std::filesystem::path			TagDir;
-	std::filesystem::path			BranchDir;
+	fs::path			DefaultSimpleGitDir;
+	fs::path			DefaultSimpleGitConfig;
 
-	std::filesystem::path			IndexFile;
+	fs::path			SimpleGitDir;
+	fs::path			ObjectDir;
+	fs::path			RefDir;
+	fs::path			TagDir;
+	fs::path			BranchDir;
+
+	fs::path			ConfigFile;
+	fs::path			IndexFile;
+	fs::path			HeadFile;
 
 	size_t							IdPrefixLength = 2;
 
 	std::vector<Tag*>				Tags;
 	std::wstring					Head;
+
+	std::map<std::wstring, std::wstring>	Config;
 };

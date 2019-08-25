@@ -1,21 +1,28 @@
 #pragma once
 
 #include <filesystem>
+#include <map>
 #include <string>
 
 struct Tag;
+namespace fs = std::filesystem;
 
-namespace Config
+namespace Globals
 {
-	const std::filesystem::path			DefaultSimpleGitDir;
+	extern fs::path			DefaultSimpleGitDir;
+	extern fs::path			DefaultSimpleGitConfig;
 
-	extern std::filesystem::path		SimpleGitDir;
-	extern std::filesystem::path		ObjectDir;
-	extern std::filesystem::path		TagDir;
-	extern std::filesystem::path		RefDir;
-	extern std::filesystem::path		BranchDir;
+	extern fs::path			SimpleGitDir;
+	extern fs::path			ObjectDir;
+	extern fs::path			TagDir;
+	extern fs::path			RefDir;
+	extern fs::path			BranchDir;
 
-	extern std::filesystem::path		IndexFile;
+	extern fs::path			IndexFile;
+	extern fs::path			ConfigFile;
+	extern fs::path			HeadFile;
 
-	extern size_t						IdPrefixLength;
+	extern size_t							IdPrefixLength;
+
+	extern std::map<std::wstring, std::wstring>	Config;
 };

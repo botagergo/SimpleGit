@@ -34,7 +34,7 @@ private:
 class ObjectFileEmptyException : public Exception
 {
 public:
-	ObjectFileEmptyException(const std::filesystem::path &path) : Exception((std::wstring(L"object file is empty: ") + path.wstring())) {}
+	ObjectFileEmptyException(const fs::path &path) : Exception((std::wstring(L"object file is empty: ") + path.wstring())) {}
 };
 
 class InvalidObjectTypeException : public Exception
@@ -95,19 +95,19 @@ private:
 class IndexFileNotFoundException : public Exception
 {
 public:
-	IndexFileNotFoundException() : Exception(std::wstring(L"index file not found: ") + Config::IndexFile.generic_wstring()) {}
+	IndexFileNotFoundException() : Exception(std::wstring(L"index file not found: ") + Globals::IndexFile.generic_wstring()) {}
 };
 
 class FileNotInIndexException : public Exception
 {
 public:
-	FileNotInIndexException(const std::filesystem::path &path) : Exception(std::wstring(L"file not in index: ") + path.wstring()) {}
+	FileNotInIndexException(const fs::path &path) : Exception(std::wstring(L"file not in index: ") + path.wstring()) {}
 };
 
 class FileAlreadyInIndexException : public Exception
 {
 public:
-	FileAlreadyInIndexException(const std::filesystem::path &path) : Exception(std::wstring(L"file already in index: ") + path.wstring()) {}
+	FileAlreadyInIndexException(const fs::path &path) : Exception(std::wstring(L"file already in index: ") + path.wstring()) {}
 };
 
 class BranchExistsException : public Exception
@@ -119,21 +119,81 @@ public:
 class FileExistsException : public Exception
 {
 public:
-	FileExistsException(const std::filesystem::path &path) : Exception(std::wstring(L"file already exists: ") + path.wstring()) {}
+	FileExistsException(const fs::path &path) : Exception(std::wstring(L"file already exists: ") + path.wstring()) {}
 };
 
 class IndexRemoveFileExists : public Exception
 {
 public:
-	IndexRemoveFileExists(const std::filesystem::path &path) : Exception(std::wstring(L"file exists: ") + path.wstring()) {}
+	IndexRemoveFileExists(const fs::path &path) : Exception(std::wstring(L"file exists: ") + path.wstring()) {}
 };
 
 class FileOpenException : public Exception
 {
 public:
-	FileOpenException(const std::filesystem::path &file) : Exception(std::wstring(L"cannot open file: ") + file.wstring()), _file(file) {}
-	const std::filesystem::path& file() const { return _file; }
+	FileOpenException(const fs::path &file) : Exception(std::wstring(L"cannot open file: ") + file.wstring()), _file(file) {}
+	const fs::path& file() const { return _file; }
 
 private:
-	std::filesystem::path _file;
+	fs::path _file;
+};
+
+class InvalidConfigFileFormatException : public Exception
+{
+public:
+	InvalidConfigFileFormatException(const fs::path& config_file)
+		: Exception(std::wstring(L"invalid config file format: ") + config_file.wstring()), _config_file(config_file) {}
+	const fs::path& file() const { return _config_file; }
+
+private:
+	fs::path _config_file;
+};
+
+class UserNameNotFoundException : public Exception
+{
+public:
+	UserNameNotFoundException() : Exception(std::wstring(L"user name not defined, define it using \"config\"")) {}
+};
+
+class IndexFileEmptyException : public Exception
+{
+public:
+	IndexFileEmptyException() : Exception(std::wstring(L"index file is empty")) {}
+};
+
+class NotCommitException : public Exception
+{
+public:
+	NotCommitException(const std::wstring &object_id) : Exception(std::wstring(L"object is not a commit: ") + object_id) {}
+
+private:
+	std::wstring object_id;
+};
+
+class NotTreeException : public Exception
+{
+public:
+	NotTreeException(const std::wstring& object_id) : Exception(std::wstring(L"object is not a tree: ") + object_id) {}
+
+private:
+	std::wstring object_id;
+};
+
+
+class CommitFileCorrupted : public Exception
+{
+public:
+	CommitFileCorrupted(const fs::path &file) : Exception(std::wstring(L"commit file corrupted: ") + file.wstring()) {}
+
+private:
+	fs::path file;
+};
+
+class TreeFileCorrupted : public Exception
+{
+public:
+	TreeFileCorrupted(const fs::path& file) : Exception(std::wstring(L"tree file corrupted: ") + file.wstring()) {}
+
+private:
+	fs::path file;
 };

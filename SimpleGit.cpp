@@ -7,6 +7,7 @@
 
 #include "blob.h"
 #include "commands.h"
+#include "config.h"
 #include "error.h"
 #include "exception.h"
 #include "globals.h"
@@ -27,11 +28,12 @@ std::map<std::wstring, void (*)(const std::vector<std::wstring>&)> command_map{
 	{L"stash", cmd_stash},
 	{L"checkout", cmd_checkout},
 	{L"merge", cmd_merge},
+	{L"read-tree", cmd_read_tree},
 };
 
 void clear_filesystem()
 {
-	RemoveDirectory(Config::SimpleGitDir.c_str());
+	RemoveDirectory(Globals::SimpleGitDir.c_str());
 }
 
 int test()
@@ -41,18 +43,27 @@ int test()
 
 void initPathConstants()
 {
+	Globals::DefaultSimpleGitDir = L".simplegit";
 	const char* gitdir = std::getenv("SIMPLEGIT_DIR");
 	if (gitdir)
-		Config::SimpleGitDir = to_wide_string(gitdir);
+		Globals::SimpleGitDir = to_wide_string(gitdir);
 	else
-		Config::SimpleGitDir = Config::DefaultSimpleGitDir;
+		Globals::SimpleGitDir = Globals::DefaultSimpleGitDir;
 
-	Config::ObjectDir = Config::SimpleGitDir / L"objects";
-	Config::RefDir = Config::SimpleGitDir / L"refs";
-	Config::TagDir = Config::RefDir / L"tags";
-	Config::BranchDir = Config::RefDir / L"heads";
+	Globals::DefaultSimpleGitConfig = Globals::SimpleGitDir / L"config";
+	const char* config = std::getenv("SIMPLEGIT_CONFIG");
+	if (config)
+		Globals::ConfigFile = Globals::SimpleGitDir / to_wide_string(config);
+	else
+		Globals::ConfigFile = Globals::DefaultSimpleGitConfig;
 
-	Config::IndexFile = Config::SimpleGitDir / L"INDEX";
+	Globals::ObjectDir = Globals::SimpleGitDir / L"objects";
+	Globals::RefDir = Globals::SimpleGitDir / L"refs";
+	Globals::TagDir = Globals::RefDir / L"tags";
+	Globals::BranchDir = Globals::RefDir / L"heads";
+
+	Globals::IndexFile = Globals::SimpleGitDir / L"INDEX";
+	Globals::HeadFile = Globals::SimpleGitDir / L"HEAD";
 }
 
 #include <fstream>

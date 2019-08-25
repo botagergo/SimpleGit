@@ -23,7 +23,7 @@ std::wstring get_hash(const std::wstring &text)
 	return to_wide_string(sha1(to_string(text)));
 }
 
-std::wstring get_file_hash(const std::filesystem::path &file)
+std::wstring get_file_hash(const fs::path &file)
 {
 	return get_hash(Filesystem::read_content(file));
 }

@@ -2,4 +2,4 @@
 
 #include <string>
 
-void create_branch(const std::wstring &name, const std::wstring &object_id, bool overwrite=false);
+void set_branch(const std::wstring& name, const std::wstring& object_id, bool overwrite = false);

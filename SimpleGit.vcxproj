@@ -155,8 +155,10 @@
   <ItemGroup>
     <ClCompile Include="blob.cpp" />
     <ClCompile Include="branch.cpp" />
+    <ClCompile Include="checkout.cpp" />
     <ClCompile Include="commands.cpp" />
     <ClCompile Include="commit.cpp" />
+    <ClCompile Include="config.cpp" />
     <ClCompile Include="filesystem.cpp" />
     <ClCompile Include="globals.cpp" />
     <ClCompile Include="helper.cpp" />
@@ -172,8 +174,10 @@
   <ItemGroup>
     <ClInclude Include="blob.h" />
     <ClInclude Include="branch.h" />
+    <ClInclude Include="checkout.h" />
     <ClInclude Include="commands.h" />
     <ClInclude Include="commit.h" />
+    <ClInclude Include="config.h" />
     <ClInclude Include="error.h" />
     <ClInclude Include="exception.h" />
     <ClInclude Include="filesystem.h" />

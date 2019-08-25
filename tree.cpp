@@ -1,100 +1,124 @@
 #include <fstream>
 #include <iostream>
 
+#include "blob.h"
 #include "exception.h"
+#include "filesystem.h"
 #include "globals.h"
 #include "helper.h"
 #include "index.h"
 #include "object_file_writer.h"
 #include "tree.h"
 
+std::wostream& operator<<(std::wostream& ostream, const TreeRecord& record)
+{
+	return ostream << record.kind << L' ' << record.id << L' ' << record.path.wstring();
+}
+
+std::wistream& operator>>(std::wistream& istream, TreeRecord& record)
+{
+	istream >> record.kind >> record.id >> std::ws;
+	std::wstring line;
+	auto& ret = std::getline(istream, line);
+	record.path = line;
+	return ret;
+}
+
 std::wstring write_tree()
 {
-	std::wifstream stream(Config::IndexFile);
+	auto create_index_objects = [](fs::path path, size_t diff_pos, std::vector<std::vector<TreeRecord>>& history)
+	{
+		auto it = path.begin();
+		size_t size = 0;
+		for (; size <= diff_pos; it++, size++)
+			;
+
+		for (; it != path.end(); it++)
+			size++;
+
+		size_t curr_level = size - 1;
+		if (history.size() <= curr_level)
+			history.resize(curr_level + 1);
+
+		std::wstring id = write_blob_from_file(path);
+		history[curr_level].push_back(TreeRecord(L"blob", id, path));
+
+		while (curr_level > diff_pos)
+		{
+			path = path.parent_path();
+
+			id = write_tree(history[curr_level]);
+			history[curr_level].clear();
+
+			curr_level--;
+			history[curr_level].push_back(TreeRecord(L"tree", id, path));
+		}
+	};
+
+	std::wifstream stream(Globals::IndexFile);
 	if (!stream)
 		throw IndexFileNotFoundException();
 
 	IndexRecord record;
+	fs::path prev_path;
+	std::vector<std::vector<TreeRecord>> history(3);
 
-	std::vector<std::filesystem::path> curr_components;
-	std::filesystem::path prev_path;
+	stream >> record;
+	if (!stream)
+		throw IndexFileEmptyException();
 
-	std::vector<std::vector<std::pair<std::wstring, std::filesystem::path>>> dir_history;
-	std::vector<std::vector<std::pair<std::wstring, std::filesystem::path>>> file_history;
-
-	file_history.resize(3);
-	dir_history.resize(3);
+	prev_path = record.path;
 
 	while (stream >> record)
 	{
+		auto prev_it = prev_path.begin();
+		auto curr_it = record.path.begin();
 
-		auto curr_it = curr_components.begin();
-		auto it = record.path.begin();
+		size_t diff_pos = 0;
+		for (; prev_it != prev_path.end() && curr_it != record.path.end() && *prev_it == *curr_it; prev_it++, curr_it++)
+			diff_pos++;
 
-		if (curr_components.empty())
-		{
-			std::copy(record.path.begin(), record.path.end(), std::back_inserter(curr_components));
-			prev_path = record.path;
-			continue;
-		}
+		assert(prev_it != prev_path.end() && curr_it != record.path.end());
 
-		for (; curr_it != curr_components.end() && it != record.path.end() && *curr_it == *it; curr_it++, it++)
-			;
-
-		// a path to a file cannot be a subpath of a path to another file
-		assert((curr_it == curr_components.end()) == (it == record.path.end()));
-
-		int curr_depth = -1;
-
-		for (auto it = prev_path.begin(); it != prev_path.end(); it++) // todo
-			curr_depth++;
-
-		auto last_component = curr_components.rbegin();
-
-		if (dir_history.size() <= curr_depth)
-		{
-			file_history.resize(curr_depth + 1);
-			dir_history.resize(curr_depth + 1);
-		}
-
-		if (prev_path != L"z")
-		{
-			std::wstring id = create_blob_from_file(prev_path);
-			file_history[curr_depth].push_back(std::make_pair(id, prev_path));
-		}
-
-
-		while (*last_component != *curr_it)
-		{
-			last_component++;
-			prev_path = prev_path.parent_path();
-
-			std::wstring id = create_tree(file_history[curr_depth], dir_history[curr_depth]);
-			file_history[curr_depth].clear(); dir_history[curr_depth].clear();
-
-			curr_depth--;
-			dir_history[curr_depth].push_back(std::make_pair(id, prev_path));
-		}
-
-		curr_components.resize(curr_it - curr_components.begin());
-		std::copy(it, record.path.end(), std::back_inserter(curr_components));
-
+		create_index_objects(prev_path, diff_pos, history);
 		prev_path = record.path;
 	}
 
-	return create_tree(file_history[0], dir_history[0]);
+	create_index_objects(prev_path, 0, history);
+	return write_tree(history[0]);
 }
 
-std::wstring create_tree(const std::vector<std::pair<std::wstring, std::filesystem::path>>& files,
-	const std::vector<std::pair<std::wstring, std::filesystem::path>>& dirs)
+void read_tree(const std::wstring& tree_id, const fs::path& root_dir)
+{
+	std::wfstream in_stream;
+	Filesystem::open(Filesystem::get_object_path(tree_id), in_stream, std::ios::in);
+
+	std::wstring object_type;
+	in_stream >> object_type;
+
+	if (object_type != L"tree")
+		throw NotTreeException(tree_id);
+
+	TreeRecord record;
+	while (in_stream >> record)
+	{
+		if (record.kind == L"blob")
+			read_blob(record.id, root_dir / record.path);
+		else if (record.kind == L"tree")
+			read_tree(record.id, root_dir);
+		else
+			throw TreeFileCorrupted(tree_id);
+	}
+}
+
+std::wstring write_tree(const std::vector<TreeRecord>& records)
 {
 	ObjectFileWriter writer;
 
-	for (auto file : files)
-		writer << L"blob " << file.second.wstring() << L" " << file.first << L"\n";
-	for (auto dir : dirs)
-		writer << L"tree " << dir.second.wstring() << L" " << dir.first << L"\n";
+	writer << L"tree" << L'\n';
 
-	writer.save();
-	return writer.id();
+	for (const TreeRecord& record : records)
+		writer << record << L"\n";
+
+	return writer.save();
 }

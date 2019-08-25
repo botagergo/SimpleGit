@@ -5,12 +5,26 @@
 #include <vector>
 
 #include "blob.h"
-#include "object.h"
 #include <cassert>
 
-// creates a tree from the current index
-// todo: optimize
-std::wstring write_tree();
+struct TreeRecord
+{
+	TreeRecord(std::wstring kind, const std::wstring& id, const fs::path &path) : kind(kind), id(id), path(path) {}
+	TreeRecord() {}
 
-std::wstring create_tree(const std::vector<std::pair<std::wstring, std::filesystem::path>>& files,
-	const std::vector<std::pair<std::wstring, std::filesystem::path>>& dirs);
+	std::wstring			kind;
+	std::wstring			id;
+	fs::path				path;
+};
+
+std::wostream& operator<<(std::wostream& ostream, const TreeRecord& record);
+std::wistream& operator>>(std::wistream& istream, TreeRecord& record);
+
+// creates a new tree from the current index
+std::wstring	write_tree();
+
+// creates a new tree from the given tree records
+std::wstring	write_tree(const std::vector<TreeRecord>& records);
+
+// reads a tree into the specified directory
+void			read_tree(const std::wstring& tree_id, const fs::path& root_dir = L"");

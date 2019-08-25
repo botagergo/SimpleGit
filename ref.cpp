@@ -8,17 +8,17 @@
 
 bool get_referenced(const std::wstring &ref, std::wstring &referenced)
 {
-	if (std::filesystem::exists(Config::TagDir / ref))
+	if (fs::exists(Globals::TagDir / ref))
 	{
-		referenced = Filesystem::read_content(Config::TagDir / ref);
+		referenced = Filesystem::read_content(Globals::TagDir / ref);
 		return true;
 	}
-	else if (std::filesystem::exists(Config::BranchDir / ref))
+	else if (fs::exists(Globals::BranchDir / ref))
 	{
-		referenced = Filesystem::read_content(Config::BranchDir / ref);
+		referenced = Filesystem::read_content(Globals::BranchDir / ref);
 		return true;
 	}
-	else if (std::filesystem::exists(Filesystem::get_object_path(ref)))
+	else if (fs::exists(Filesystem::get_object_path(ref)))
 		return false;
 	else
 		throw InvalidReferenceException(ref);

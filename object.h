@@ -1,8 +1,3 @@
 #pragma once
 
-struct ObjectHeader
-{
-	std::wstring object_kind;
-};
-
-ObjectHeader parse_object_header(std::wistream& stream);
+std::wstring open_object(const std::wstring& object_id, std::wfstream& object);

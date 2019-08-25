@@ -10,6 +10,7 @@
 #include "globals.h"
 #include "helper.h"
 #include "index.h"
+#include "tree.h"
 
 std::wostream& operator<<(std::wostream& ostream, const IndexRecord& record)
 {
@@ -25,62 +26,7 @@ std::wistream& operator>>(std::wistream& istream, IndexRecord& record)
 	return ret;
 }
 
-//void update_index(const std::vector<std::filesystem::path> &files, int flags)
-//{
-//	// check for invalid flag combination
-//	if ((flags & UPDATE_INDEX_REMOVE) &&
-//		(flags & (UPDATE_INDEX_ADD | UPDATE_INDEX_MODIFY)))
-//		assert(false);
-//
-//	// make sure the index file exists
-//	std::wfstream stream(Config::IndexFile, std::fstream::app);
-//	stream.close();
-//
-//	stream.open(Config::IndexFile, std::fstream::in);
-//	if (!stream)
-//		throw IndexFileNotFoundException();
-//
-//	std::wstringstream output;
-//	IndexRecord record;
-//
-//	auto curr_file = files.begin();
-//
-//	// we read the index file until we reach eof or find a matching file
-//	while (!(stream >> record).eof() && record.path != *curr_file)
-//		output << record << std::endl;
-//
-//	if (record.path == *curr_file)
-//	{
-//		// UPDATE_INDEX_MODIFY: output the new record
-//		// UPDATE_INDEX_ADD: throw exception
-//		// UPDATE_INDEX_REMOVE: skip the record
-//		if (flags & UPDATE_INDEX_MODIFY)
-//			output << IndexRecord(create_blob_from_file(filename), filename) << std::endl;
-//		else if (flags & UPDATE_INDEX_ADD)
-//			throw FileAlreadyInIndexException(filename);
-//		else if ((flags & UPDATE_INDEX_FORCE_REMOVE) != UPDATE_INDEX_FORCE_REMOVE && std::filesystem::exists(record.path))
-//			throw IndexRemoveFileExists(filename);
-//
-//		// finish reading the entire file
-//		while (!(stream >> record).eof())
-//			output << record << std::endl;
-//	}
-//	else
-//	{
-//		if (flags & UPDATE_INDEX_ADD)
-//			output << IndexRecord(create_blob_from_file(filename), filename);
-//		else
-//			throw FileNotInIndexException(filename);
-//	}
-//
-//	std::wstring line;
-//	stream.close();
-//	stream.open(Config::IndexFile, std::fstream::out);
-//	while (std::getline(output, line))
-//		stream << line << std::endl;
-//}
-
-void update_index(const std::vector<std::filesystem::path>& files, int flags)
+void update_index(const std::vector<fs::path>& files, int flags)
 {
 	// check for invalid flag combination
 	if ((flags & UPDATE_INDEX_REMOVE) &&
@@ -90,10 +36,10 @@ void update_index(const std::vector<std::filesystem::path>& files, int flags)
 	assert(files.size() > 0);
 
 	// make sure the index file exists
-	std::wfstream stream(Config::IndexFile, std::fstream::app);
+	std::wfstream stream(Globals::IndexFile, std::fstream::app);
 	stream.close();
 
-	stream.open(Config::IndexFile, std::fstream::in);
+	stream.open(Globals::IndexFile, std::fstream::in);
 	if (!stream)
 		throw IndexFileNotFoundException();
 
@@ -121,17 +67,17 @@ void update_index(const std::vector<std::filesystem::path>& files, int flags)
 				// UPDATE_INDEX_ADD: throw exception
 				// UPDATE_INDEX_REMOVE: skip the record
 				if (flags & UPDATE_INDEX_MODIFY)
-					output << IndexRecord(create_blob_from_file(*curr_file), *curr_file) << L"\n";
+					output << IndexRecord(write_blob_from_file(*curr_file), *curr_file) << L"\n";
 				else if (flags & UPDATE_INDEX_ADD)
 					throw FileAlreadyInIndexException(*curr_file);
-				else if ((flags & UPDATE_INDEX_FORCE_REMOVE) != UPDATE_INDEX_FORCE_REMOVE && std::filesystem::exists(record.path))
+				else if ((flags & UPDATE_INDEX_FORCE_REMOVE) != UPDATE_INDEX_FORCE_REMOVE && fs::exists(record.path))
 					throw IndexRemoveFileExists(*curr_file);
 				updated = true;
 			}
 			else if (*curr_file < record.path)
 			{
 				if (flags & UPDATE_INDEX_ADD)
-					output << IndexRecord(create_blob_from_file(*curr_file), *curr_file) << L"\n";
+					output << IndexRecord(write_blob_from_file(*curr_file), *curr_file) << L"\n";
 				else
 					throw FileNotInIndexException(*curr_file);
 			}
@@ -152,7 +98,7 @@ void update_index(const std::vector<std::filesystem::path>& files, int flags)
 		{
 			while (curr_file != files.end())
 			{
-				output << IndexRecord(create_blob_from_file(*curr_file), *curr_file) << L"\n";
+				output << IndexRecord(write_blob_from_file(*curr_file), *curr_file) << L"\n";
 				curr_file++;
 			}
 		}
@@ -161,5 +107,27 @@ void update_index(const std::vector<std::filesystem::path>& files, int flags)
 	}
 
 	stream.close();
-	Filesystem::write_content(Config::IndexFile, (std::wistream&)output, Filesystem::FILE_FLAG_OVERWRITE);
+	Filesystem::write_content(Globals::IndexFile, (std::wistream&)output, Filesystem::FILE_FLAG_OVERWRITE);
+}
+
+void write_index(std::wostream& out_stream, const std::wstring& tree_id)
+{
+	std::wfstream in_stream;
+	Filesystem::open(Filesystem::get_object_path(tree_id), in_stream, std::ios_base::in);
+
+	TreeRecord record;
+	while (in_stream >> record)
+	{
+		if (record.kind == L"blob")
+			out_stream << IndexRecord(record.id, record.path) << L"\n";
+		else
+			write_index(out_stream, record.id);
+	}
+}
+
+void write_index(const fs::path& index_file, const std::wstring& tree_id)
+{
+	std::wfstream out_stream;
+	Filesystem::open(index_file, out_stream, std::ios_base::out);
+	write_index(out_stream, tree_id);
 }
