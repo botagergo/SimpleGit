@@ -5,6 +5,8 @@
 
 #include <windows.h>
 
+#include <boost/program_options/errors.hpp>
+
 #include "blob.h"
 #include "commands.h"
 #include "config.h"
@@ -17,8 +19,9 @@
 #include "tag.h"
 
 //#define TEST
+//#define WAIT_FOR_ENTER
 
-std::map<std::wstring, void (*)(const std::vector<std::wstring>&)> command_map{
+std::map<std::wstring, void (*)(int argc, wchar_t* argv[])> command_map {
 	{L"init", cmd_init},
 	{L"add", cmd_add},
 	{L"update-index", cmd_update_index},
@@ -29,6 +32,8 @@ std::map<std::wstring, void (*)(const std::vector<std::wstring>&)> command_map{
 	{L"checkout", cmd_checkout},
 	{L"merge", cmd_merge},
 	{L"read-tree", cmd_read_tree},
+	{L"write-tree", cmd_write_tree},
+	{L"cat-file", cmd_cat_file},
 };
 
 void clear_filesystem()
@@ -67,26 +72,30 @@ void initPathConstants()
 }
 
 #include <fstream>
-int main(int argc, char *argv[])
+int wmain(int argc, wchar_t* argv[])
 {
+#ifdef WAIT_FOR_ENTER
+	{std::string str; std::cin >> str; }
+#endif
 	initPathConstants();
 
-	if (argc == 1)
-		;
-	else
-	{
-		std::vector<std::wstring> wargs;
-		std::wstring command = to_wide_string(argv[1]);
-
-		for (int i = 2; i < argc; i++)
+	try {
+		if (argc == 1)
+			;
+		else
 		{
-			wargs.push_back(to_wide_string(argv[i]));
+			std::wstring command = argv[1];
+			auto cmd = command_map.find(command);
+			if (cmd != command_map.end())
+				cmd->second(argc-1, argv+1);
+			else
+				error(std::wstring(L"unknown command: ") + command);
 		}
 
-		auto cmd = command_map.find(command);
-		if (cmd != command_map.end())
-			cmd->second(wargs);
+		return 0;
 	}
-
-	return 0;
+	catch (const boost::program_options::unknown_option& e)
+	{
+		error(L"unknown option: %s", e.what());
+	}
 }

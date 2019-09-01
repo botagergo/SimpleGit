@@ -1,4 +1,3 @@
-#include <filesystem>
 #include <fstream>
 #include <windows.h>
 
@@ -7,41 +6,22 @@
 
 namespace Filesystem
 {
-	void open(const fs::path &path, std::wfstream &stream, int mode, bool create_directory)
-	{
-		if (create_directory)
-		{
-			fs::path dir = path;
-			dir.remove_filename();
-			create_directory_recursive(dir, false);
-		}
-
-		stream.open(path, mode);
-
-		if (!stream)
-			throw FileOpenException(path);
-	}
-
 	void create_directory(const fs::path &dir, bool hidden)
 	{
-		//TODO	use boost
-		CreateDirectory(dir.c_str(), NULL);
+		boost::system::error_code ec;
+		bool b = fs::create_directories(dir, ec);
+		auto m = ec.message();
 		if (hidden)
 			SetFileAttributes(dir.c_str(), FILE_ATTRIBUTE_HIDDEN);
-	}
-
-	void create_directory_recursive(const fs::path &dir, bool hidden)
-	{
-		fs::path path;
-		for (const fs::path &comp : dir)
-			create_directory(path /= comp, hidden);
 	}
 
 	std::wstring read_content(const fs::path &file) // todo: throw exception
 	{
 		std::wfstream stream;
 		open(file, stream, std::ios_base::in);
-		return read_content(stream);
+		std::wstring ret = read_content(stream);
+		stream.close();
+		return ret;
 	}
 
 	std::wstring read_content(std::wistream& stream)
@@ -55,8 +35,11 @@ namespace Filesystem
 		if (!(flags & FILE_FLAG_OVERWRITE) && fs::exists(file))
 			throw FileExistsException(file);
 
-		std::wfstream stream;
-		open(file, (std::wfstream&)stream, std::ios_base::out);
+		if (flags & FILE_FLAG_CREATE_DIRECTORIES)
+			create_directories(file.parent_path());
+
+		std::wofstream stream;
+		open(file, stream);
 
 		if (!stream)
 			throw FileOpenException(file);
@@ -72,9 +55,9 @@ namespace Filesystem
 		if (!(flags & FILE_FLAG_OVERWRITE) && fs::exists(file))
 			throw FileExistsException(file);
 
-		std::wfstream out_stream;
+		std::wofstream out_stream;
 
-		open(file, out_stream, std::ios_base::out);
+		open(file, out_stream);
 		write_content(out_stream, in_stream);
 		out_stream.close();
 
@@ -101,7 +84,7 @@ namespace Filesystem
 		return Globals::ObjectDir / prefix;
 	}
 
-	std::wstring open_object(const std::wstring& object_id, std::wfstream& in_stream)
+	std::wstring open_object(const std::wstring& object_id, std::wifstream& in_stream)
 	{
 		Filesystem::open(Filesystem::get_object_path(object_id), in_stream, std::ios_base::in);
 
@@ -109,5 +92,30 @@ namespace Filesystem
 		in_stream >> object_type >> std::ws;
 
 		return object_type;
+	}
+
+	bool object_exists(const std::wstring& object_id)
+	{
+		return fs::exists(get_object_path(object_id));
+	}
+
+	bool is_prefix(const fs::path& prefix, const fs::path& path)
+	{
+		auto res = std::mismatch(prefix.begin(), prefix.end(), path.begin());
+		if (res.first == prefix.end())
+			return true;
+		else
+			return false;
+	}
+	void make_sure_file_exists(const fs::path& file)
+	{
+		std::wofstream stream(file.wstring(), std::ios_base::app);
+	}
+
+	struct stat get_stat(const fs::path& file)
+	{
+		struct stat ret;
+		stat(file.string().c_str(), &ret);
+		return ret;
 	}
 }

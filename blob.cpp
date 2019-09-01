@@ -14,13 +14,13 @@ std::wstring write_blob(const std::wstring &content)
 
 void read_blob(const std::wstring& id, const fs::path& file)
 {
-	std::wfstream in_stream;
+	std::wifstream in_stream;
 	std::wstring object_type = Filesystem::open_object(id, in_stream);
 	if (object_type != L"blob")
 		throw NotBlobException(id);
 
-	std::wfstream out_stream;
-	Filesystem::open(file, out_stream, std::ios_base::out, true);
+	std::wofstream out_stream;
+	Filesystem::open(file, out_stream, true);
 	Filesystem::write_content(out_stream, in_stream);
 }
 

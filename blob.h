@@ -3,9 +3,11 @@
 #include <filesystem>
 #include <string>
 
+#include <boost/filesystem.hpp>
+
 #include "object.h"
 
-namespace fs = std::filesystem;
+namespace fs = boost::filesystem;
 
 std::wstring			write_blob(const std::wstring& content);
 std::wstring			write_blob_from_file(const fs::path& filename);

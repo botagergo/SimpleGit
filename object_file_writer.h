@@ -18,6 +18,7 @@ public:
 private:
 	std::wstringstream	_stream;
 	std::wstring		_id;
+	bool				_saved = false;
 };
 
 template <typename T>

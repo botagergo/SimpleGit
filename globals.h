@@ -4,8 +4,10 @@
 #include <map>
 #include <string>
 
+#include <boost/filesystem.hpp>
+
 struct Tag;
-namespace fs = std::filesystem;
+namespace fs = boost::filesystem;
 
 namespace Globals
 {

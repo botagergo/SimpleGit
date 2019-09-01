@@ -66,6 +66,12 @@
     <ClCompile Include="object.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="merge.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="index_two_tree_iterator.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="blob.h">
@@ -120,6 +126,15 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="object.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="merge.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="index_two_tree_iterator.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="defines.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
