@@ -87,7 +87,11 @@ int wmain(int argc, wchar_t* argv[])
 			std::wstring command = argv[1];
 			auto cmd = command_map.find(command);
 			if (cmd != command_map.end())
-				cmd->second(argc-1, argv+1);
+				try{
+					cmd->second(argc - 1, argv + 1);
+				} catch (const std::exception& e) {
+					error(e.what());
+				}
 			else
 				error(std::wstring(L"unknown command: ") + command);
 		}
