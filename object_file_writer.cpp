@@ -5,7 +5,7 @@
 #include "helper.h"
 #include "object_file_writer.h"
 
-std::wstring ObjectFileWriter::save()
+std::string ObjectFileWriter::save()
 {
 	if (_saved)
 		return _id;
@@ -16,7 +16,7 @@ std::wstring ObjectFileWriter::save()
 	if (Filesystem::object_exists(_id))
 		return _id;
 
-	std::wofstream out_stream;
+	std::ofstream out_stream;
 	Filesystem::open(Filesystem::get_object_path(_id), out_stream, true);
 	out_stream << _stream.str();
 	out_stream.close();
@@ -27,14 +27,14 @@ std::wstring ObjectFileWriter::save()
 	return _id;
 }
 
-std::wstring ObjectFileWriter::id() const
+std::string ObjectFileWriter::id() const
 {
 	return _id;
 }
 
-ObjectFileWriter& operator<<(ObjectFileWriter& writer, std::wostream& (*pf)(std::wostream&))
+ObjectFileWriter& operator<<(ObjectFileWriter& writer, std::ostream& (*pf)(std::ostream&))
 {
-	std::wstring str;
+	std::string str;
 	writer._stream << str;
 	return writer;
 }

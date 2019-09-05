@@ -29,7 +29,7 @@ namespace Filesystem
 			Filesystem::create_directory(dir, false);
 		}
 
-		stream.open(path.wstring());
+		stream.open(path.string());
 
 		if (!stream)
 			throw FileOpenException(path);
@@ -37,19 +37,25 @@ namespace Filesystem
 
 	void create_directory(const fs::path& dir, bool hidden = false);
 
-	std::wstring read_content(const fs::path& file);
-	std::wstring read_content(std::wistream& stream);
+	std::string read_content(const fs::path& file);
 
-	void write_content(const fs::path &file, const std::wstring &content, int flags = 0);
-	void write_content(const fs::path& file, std::wistream& in_stream, int flags = 0);
-	void write_content(std::wostream& out_stream, std::wistream& in_stream);
+	template <typename InStream>
+	std::string read_content(InStream& stream)
+	{
+		return std::string((std::istreambuf_iterator<char>(stream)),
+			std::istreambuf_iterator<char>());
+	}
 
-	fs::path get_object_path(const std::wstring& id);
-	fs::path get_object_dir(const std::wstring& id);
+	void write_content(const fs::path &file, const std::string &content, int flags = 0);
+	void write_content(const fs::path& file, std::istream& in_stream, int flags = 0);
+	void write_content(std::ostream& out_stream, std::istream& in_stream);
 
-	std::wstring open_object(const std::wstring& object_id, std::wifstream& in_stream);
+	fs::path get_object_path(const std::string& id);
+	fs::path get_object_dir(const std::string& id);
 
-	bool object_exists(const std::wstring& object_id);
+	std::string open_object(const std::string& object_id, std::ifstream& in_stream);
+
+	bool object_exists(const std::string& object_id);
 
 	bool is_prefix(const fs::path& prefix, const fs::path& path);
 

@@ -1,6 +1,7 @@
 #include <fstream>
 #include <windows.h>
 #include <filesystem>
+#include <codecvt>
 
 #include "exception.h"
 #include "filesystem.h"
@@ -17,13 +18,12 @@ std::string to_string(const std::wstring &str)
 	return std::wstring_convert<std::codecvt_utf8<wchar_t>>().to_bytes(str);
 }
 
-std::wstring get_hash(const std::wstring &text)
+std::string get_hash(const std::string &text)
 {
-	// std::string str = to_string(text); ////////////////////////////
-	return to_wide_string(sha1(to_string(text)));
+	return sha1(text);
 }
 
-std::wstring get_file_hash(const fs::path &file)
+std::string get_file_hash(const fs::path &file)
 {
 	return get_hash(Filesystem::read_content(file));
 }

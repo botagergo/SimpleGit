@@ -7,7 +7,7 @@
 #include "globals.h"
 #include "helper.h"
 
-void write_branch(const std::wstring& name, const std::wstring& object_id, int flags)
+void write_branch(const std::string& name, const std::string& object_id, int flags)
 {
 	try {
 		Filesystem::write_content(Globals::BranchDir / name, object_id, flags | Filesystem::FILE_FLAG_CREATE_DIRECTORIES);
@@ -17,10 +17,10 @@ void write_branch(const std::wstring& name, const std::wstring& object_id, int f
 	}
 }
 
-void move_branch(const std::wstring& oldname, const std::wstring& newname, int flags)
+void move_branch(const std::string& oldname, const std::string& newname, int flags)
 {
 	if (!is_branch(oldname))
-		throw Exception(boost::wformat(L"branch doesn't exist: %1%") % oldname);
+		throw Exception(boost::format("branch doesn't exist: %1%") % oldname);
 
 	if (is_branch(newname))
 	{
@@ -36,10 +36,10 @@ void move_branch(const std::wstring& oldname, const std::wstring& newname, int f
 	fs::rename(Globals::BranchDir / oldname, Globals::BranchDir / newname);
 }
 
-void copy_branch(const std::wstring& oldname, const std::wstring& newname, int flags)
+void copy_branch(const std::string& oldname, const std::string& newname, int flags)
 {
 	if (!is_branch(oldname))
-		throw Exception(boost::wformat(L"branch doesn't exist: %1%") % oldname);
+		throw Exception(boost::format("branch doesn't exist: %1%") % oldname);
 
 	if (is_branch(newname))
 	{
@@ -52,38 +52,38 @@ void copy_branch(const std::wstring& oldname, const std::wstring& newname, int f
 	fs::copy(Globals::BranchDir / oldname, Globals::BranchDir / newname);
 }
 
-void delete_branch(const std::wstring& name, int flags)
+void delete_branch(const std::string& name, int flags)
 {
 	if (read_head() == name)
-		throw Exception(boost::wformat(L"cannot delete branch '%1%', checked out") % name);
+		throw Exception(boost::format("cannot delete branch '%1%', checked out") % name);
 	if (!fs::remove(Globals::BranchDir / name))
-		throw Exception(boost::wformat(L"branch doesn't exist: %1%") % name);
+		throw Exception(boost::format("branch doesn't exist: %1%") % name);
 }
 
-bool is_branch(const std::wstring& name)
+bool is_branch(const std::string& name)
 {
 	return fs::exists(Globals::BranchDir / name);
 }
 
-std::wstring resolve_branch(const std::wstring& branch_name)
+std::string resolve_branch(const std::string& branch_name)
 {
 	return Filesystem::read_content(Globals::BranchDir / branch_name);
 }
 
-void write_head(const std::wstring& name)
+void write_head(const std::string& name)
 {
 	Filesystem::write_content(Globals::HeadFile, name, Filesystem::FILE_FLAG_OVERWRITE);
 }
 
-std::wstring read_head()
+std::string read_head()
 {
 	return Filesystem::read_content(Globals::HeadFile);
 }
 
-std::wstring resolve_head()
+std::string resolve_head()
 {
 	try {
-		std::wstring name = Filesystem::read_content(Globals::HeadFile);
+		std::string name = Filesystem::read_content(Globals::HeadFile);
 		if (is_branch(name))
 			return resolve_branch(name);
 		else
@@ -101,6 +101,6 @@ void list_branches()
 
 	for (const fs::path branch : fs::directory_iterator(Globals::BranchDir))
 	{
-		message(branch.filename().wstring());
+		message(branch.filename().string());
 	}
 }

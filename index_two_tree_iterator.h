@@ -8,7 +8,7 @@
 class IndexTwoTreeIterator
 {
 public:
-	IndexTwoTreeIterator(std::wifstream& index_in_stream, std::wifstream& tree1_in_stream, std::wifstream& tree2_in_stream)
+	IndexTwoTreeIterator(std::ifstream& index_in_stream, std::ifstream& tree1_in_stream, std::ifstream& tree2_in_stream)
 		: _index_in_stream(index_in_stream), _tree1_in_stream(tree1_in_stream), _tree2_in_stream(tree2_in_stream)
 	{
 		_end = false;
@@ -36,9 +36,9 @@ private:
 	bool		_has_tree1;
 	bool		_has_tree2;
 
-	std::wifstream& _index_in_stream;
-	std::wifstream& _tree1_in_stream;
-	std::wifstream& _tree2_in_stream;
+	std::ifstream& _index_in_stream;
+	std::ifstream& _tree1_in_stream;
+	std::ifstream& _tree2_in_stream;
 
 	bool		_end;
 	bool		_first_iter;

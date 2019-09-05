@@ -12,9 +12,9 @@
 #include "object_file_writer.h"
 #include "tag.h"
 
-Commit read_commit(const std::wstring& commit_id)
+Commit read_commit(const std::string& commit_id)
 {
-	std::wifstream in_stream;
+	std::ifstream in_stream;
 	open_commit(in_stream, commit_id);
 
 	fs::path commit_file = Filesystem::get_object_path(commit_id);
@@ -27,33 +27,33 @@ Commit read_commit(const std::wstring& commit_id)
 	}
 }
 
-Commit read_commit(std::wistream& in_stream)
+Commit read_commit(std::istream& in_stream)
 {
 	Commit commit;
-	std::wstring str;
+	std::string str;
 
 	in_stream >> str;
-	if (str != L"tree")
-		throw CommitFileCorrupted(L"");
+	if (str != "tree")
+		throw CommitFileCorrupted("");
 	in_stream >> commit.tree_id;
 
 	in_stream >> str;
-	if (str != L"parents")
-		throw CommitFileCorrupted(L"");
+	if (str != "parents")
+		throw CommitFileCorrupted("");
 	std::getline(in_stream, str);
-	std::wstringstream ss(str);
+	std::stringstream ss(str);
 	while (ss >> str)
 		commit.parents.push_back(str);
 
 	in_stream >> str >> std::ws;
-	if (str != L"author")
-		throw CommitFileCorrupted(L"");
+	if (str != "author")
+		throw CommitFileCorrupted("");
 	std::getline(in_stream, str);
 	commit.author = str;
 
 	in_stream >> str >> std::ws;
-	if (str != L"committer")
-		throw CommitFileCorrupted(L"");
+	if (str != "committer")
+		throw CommitFileCorrupted("");
 	in_stream >> commit.committer;
 
 	in_stream >> std::ws;
@@ -63,22 +63,22 @@ Commit read_commit(std::wistream& in_stream)
 	return commit;
 }
 
-std::wstring write_commit(const Commit& commit)
+std::string write_commit(const Commit& commit)
 {
 	ObjectFileWriter writer;
-	writer << L"commit" << L"\n";
-	writer << L"tree" << L' ' << commit.tree_id << L"\n";
-	writer << L"parents";
-	for (const std::wstring& parent : commit.parents)
-		writer << L' ' << parent;
-	writer << L"\n";
-	writer << L"author" << L' ' << commit.author << L"\n";
-	writer << L"committer" << L' ' << commit.committer << L"\n";
+	writer << "commit" << "\n";
+	writer << "tree" << ' ' << commit.tree_id << "\n";
+	writer << "parents";
+	for (const std::string& parent : commit.parents)
+		writer << ' ' << parent;
+	writer << "\n";
+	writer << "author" << ' ' << commit.author << "\n";
+	writer << "committer" << ' ' << commit.committer << "\n";
 	writer << commit.message;
 	return writer.save();
 }
 
-std::wstring resolve_ref(const std::wstring& ref)
+std::string resolve_ref(const std::string& ref)
 {
 	// TODO: resolve tags
 	try {
@@ -96,21 +96,9 @@ std::wstring resolve_ref(const std::wstring& ref)
 	}
 }
 
-void open_commit(std::wifstream& in_stream, const std::wstring& commit_id)
+void open_commit(std::ifstream& in_stream, const std::string& commit_id)
 {
-	std::wstring object_type = open_object(in_stream, commit_id);
-	if (object_type != L"commit")
+	std::string object_type = open_object(in_stream, commit_id);
+	if (object_type != "commit")
 		throw NotCommitException(commit_id);
-}
-
-void pretty_print_commit(std::wostream& out_stream, std::wistream& in_stream)
-{
-	Commit commit = read_commit(in_stream);
-
-	out_stream << L"tree" << L"\t\t" << commit.tree_id << L'\n';
-	for (const std::wstring& parent : commit.parents)
-		out_stream << L"parent" << L"\t\t" << parent << L'\n';
-	out_stream << L"author" << L"\t\t" << commit.author << L'\n';
-	out_stream << L"committer" << L'\t' << commit.committer << L'\n';
-	out_stream << commit.message;
 }

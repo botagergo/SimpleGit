@@ -7,4 +7,4 @@
 
 namespace fs = boost::filesystem;
 
-std::map<std::wstring, std::wstring> read_config(const fs::path& config_file);
+std::map<std::string, std::string> read_config(const fs::path& config_file);

@@ -12,23 +12,23 @@
 #include "object_file_writer.h"
 #include "tree.h"
 
-std::wostream& operator<<(std::wostream& ostream, const TreeRecord& record)
+std::ostream& operator<<(std::ostream& ostream, const TreeRecord& record)
 {
-	return ostream << record.kind << L' ' << record.id << L' ' << record.path.wstring();
+	return ostream << record.kind << ' ' << record.id << ' ' << record.path.string();
 }
 
-std::wistream& operator>>(std::wistream& istream, TreeRecord& record)
+std::istream& operator>>(std::istream& istream, TreeRecord& record)
 {
 	istream >> record.kind >> record.id >> std::ws;
-	std::wstring line;
+	std::string line;
 	auto& ret = std::getline(istream, line);
 	record.path = line;
 	return ret;
 }
 
-std::wstring write_tree(const fs::path& prefix, bool ignore_missing)
+std::string write_tree(const fs::path& prefix, bool ignore_missing)
 {
-	std::wstring ret_id;
+	std::string ret_id;
 
 	auto create_index_objects = [&](IndexRecord record, size_t diff_pos, std::vector<std::vector<TreeRecord>>& history)
 	{
@@ -47,23 +47,23 @@ std::wstring write_tree(const fs::path& prefix, bool ignore_missing)
 		if (!ignore_missing && !Filesystem::object_exists(record.id))
 			throw ObjectNotFoundException(record.id);
 
-		history[curr_level].push_back(TreeRecord(L"blob", record.id, record.path));
+		history[curr_level].push_back(TreeRecord("blob", record.id, record.path));
 
 		while (curr_level > diff_pos)
 		{
 			record.path = record.path.parent_path();
 
-			std::wstring id = write_tree(history[curr_level]);
+			std::string id = write_tree(history[curr_level]);
 			history[curr_level].clear();
 
 			curr_level--;
 			if (record.path == prefix)
 				ret_id = id;
-			history[curr_level].push_back(TreeRecord(L"tree", id, record.path));
+			history[curr_level].push_back(TreeRecord("tree", id, record.path));
 		}
 	};
 
-	std::wifstream index_in_stream(Globals::IndexFile.wstring());
+	std::ifstream index_in_stream(Globals::IndexFile.string());
 	if (!index_in_stream)
 		throw IndexFileNotFoundException();
 
@@ -94,7 +94,7 @@ std::wstring write_tree(const fs::path& prefix, bool ignore_missing)
 	}
 
 	create_index_objects(prev_record, 0, history);
-	std::wstring root_id = write_tree(history[0]);
+	std::string root_id = write_tree(history[0]);
 
 	if (!ret_id.empty())
 		return ret_id;
@@ -102,56 +102,56 @@ std::wstring write_tree(const fs::path& prefix, bool ignore_missing)
 		return root_id;
 }
 
-void read_tree(const std::wstring& tree_id, const fs::path& root_dir)
+void read_tree(const std::string& tree_id, const fs::path& root_dir)
 {
-	std::wifstream in_stream;
+	std::ifstream in_stream;
 	Filesystem::open(Filesystem::get_object_path(tree_id), in_stream);
 
-	std::wstring object_type;
+	std::string object_type;
 	in_stream >> object_type;
 
-	if (object_type != L"tree")
+	if (object_type != "tree")
 		throw NotTreeException(tree_id);
 
 	TreeRecord record;
 	while (in_stream >> record)
 	{
-		if (record.kind == L"blob")
+		if (record.kind == "blob")
 			read_blob(record.id, root_dir / record.path);
-		else if (record.kind == L"tree")
+		else if (record.kind == "tree")
 			read_tree(record.id, root_dir);
 		else
 			throw TreeFileCorrupted(tree_id);
 	}
 }
 
-std::wstring write_tree(const std::vector<TreeRecord>& records)
+std::string write_tree(const std::vector<TreeRecord>& records)
 {
 	ObjectFileWriter writer;
 
-	writer << L"tree" << L'\n';
+	writer << "tree" << '\n';
 
 	for (const TreeRecord& record : records)
-		writer << record << L"\n";
+		writer << record << "\n";
 
 	return writer.save();
 }
 
-std::wstring resolve_tree(const std::wstring& name)
+std::string resolve_tree(const std::string& name)
 {
 	if (name.size() >= 4)
 	{
-		std::wstring object_id = expand_object_id_prefix(name);
+		std::string object_id = expand_object_id_prefix(name);
 
-		std::wifstream in_stream;
-		std::wstring object_type = open_object(in_stream, object_id);
+		std::ifstream in_stream;
+		std::string object_type = open_object(in_stream, object_id);
 
-		if (object_type == L"commit")
+		if (object_type == "commit")
 		{
 			Commit commit = read_commit(in_stream);
 			return commit.tree_id;
 		}
-		else if (object_type == L"tree")
+		else if (object_type == "tree")
 			return object_id;
 		else
 			throw NotTreeException(name);
@@ -160,16 +160,9 @@ std::wstring resolve_tree(const std::wstring& name)
 	throw ResolveObjectException(name);
 }
 
-void open_tree(std::wifstream& in_stream, const std::wstring& tree_id)
+void open_tree(std::ifstream& in_stream, const std::string& tree_id)
 {
-	std::wstring object_type = open_object(in_stream, tree_id);
-	if (object_type != L"tree")
+	std::string object_type = open_object(in_stream, tree_id);
+	if (object_type != "tree")
 		throw NotTreeException(tree_id);
-}
-
-void pretty_print_tree(std::wostream& out_stream, std::wistream& in_stream)
-{
-	TreeRecord record;
-	while (in_stream >> record)
-		out_stream << record.kind << L'\t' << record.id << L'\t' << record.path << L'\n';
 }

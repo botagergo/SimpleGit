@@ -6,7 +6,7 @@
 #include "ref.h"
 #include "tag.h"
 
-bool get_referenced(const std::wstring &ref, std::wstring &referenced)
+bool get_referenced(const std::string &ref, std::string &referenced)
 {
 	if (fs::exists(Globals::TagDir / ref))
 	{
@@ -24,9 +24,9 @@ bool get_referenced(const std::wstring &ref, std::wstring &referenced)
 		throw InvalidReferenceException(ref);
 }
 
-void get_referenced_object(const std::wstring &ref, std::wstring &referenced)
+void get_referenced_object(const std::string &ref, std::string &referenced)
 {
-	std::wstring ret;
+	std::string ret;
 	while (get_referenced(ref, ret))
 		;
 	referenced = ret;

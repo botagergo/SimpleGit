@@ -26,5 +26,5 @@ namespace Globals
 
 	extern size_t							IdPrefixLength;
 
-	extern std::map<std::wstring, std::wstring>	Config;
+	extern std::map<std::string, std::string>	Config;
 };

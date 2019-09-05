@@ -2,6 +2,7 @@
 #include <iostream>
 #include <string>
 #include <vector>
+#include <map>
 
 #include <boost/program_options.hpp>
 #include <boost/format.hpp>
@@ -60,7 +61,7 @@ void init_filesystem()
 	Filesystem::create_directory(Globals::TagDir);
 	Filesystem::create_directory(Globals::BranchDir);
 
-	Filesystem::write_content(Globals::ConfigFile, L"", Filesystem::FILE_FLAG_OVERWRITE);
+	Filesystem::write_content(Globals::ConfigFile, "", Filesystem::FILE_FLAG_OVERWRITE);
 }
 
 // initializes stuff that are needed for the actual repository commands
@@ -69,18 +70,18 @@ void init_for_git_commands()
 	Globals::Config = read_config(Globals::ConfigFile);
 }
 
-void cmd_init(int argc, wchar_t* argv[])
+void cmd_init(int argc, char* argv[])
 {
 	if (!fs::exists(Globals::SimpleGitDir))
 	{
 		init_filesystem();
-		message(L"Initialized empty Git repository in " + fs::absolute(Globals::SimpleGitDir).wstring());
+		message("Initialized empty Git repository in " + fs::absolute(Globals::SimpleGitDir).string());
 	}
 	else
-		error(L"git repository already exists: " + fs::absolute(Globals::SimpleGitDir).wstring());
+		error("git repository already exists: " + fs::absolute(Globals::SimpleGitDir).string());
 }
 
-void cmd_add(int argc, wchar_t* argv[])
+void cmd_add(int argc, char* argv[])
 {
 	po::positional_options_description pos;
 	pos
@@ -93,7 +94,7 @@ void cmd_add(int argc, wchar_t* argv[])
 
 	po::variables_map vm;
 
-	po::store(po::basic_command_line_parser<wchar_t>(argc, argv)
+	po::store(po::command_line_parser(argc, argv)
 		.options(desc)
 		.positional(pos).run(), vm);
 	po::notify(vm);
@@ -101,7 +102,7 @@ void cmd_add(int argc, wchar_t* argv[])
 	init_for_git_commands();
 
 	if (!vm.count("files"))
-		message(L"nothing specified, nothing added");
+		message("nothing specified, nothing added");
 	else
 	{
 		std::vector<fs::path> files = vm["files"].as<std::vector<fs::path>>();
@@ -111,7 +112,7 @@ void cmd_add(int argc, wchar_t* argv[])
 	}
 }
 
-void cmd_update_index(int argc, wchar_t* argv[])
+void cmd_update_index(int argc, char* argv[])
 {
 	po::positional_options_description pos;
 	pos
@@ -125,7 +126,7 @@ void cmd_update_index(int argc, wchar_t* argv[])
 		;
 
 	po::variables_map vm;
-	po::store(po::basic_command_line_parser<wchar_t>(argc, argv)
+	po::store(po::command_line_parser(argc, argv)
 		.options(desc)
 		.positional(pos).run(), vm);
 	po::notify(vm);
@@ -144,34 +145,34 @@ void cmd_update_index(int argc, wchar_t* argv[])
 	update_index(vm["files"].as<std::vector<fs::path>>(), flags);
 }
 
-void cmd_commit(int argc, wchar_t* argv[])
+void cmd_commit(int argc, char* argv[])
 {
 	po::positional_options_description pos;
 
 	po::options_description desc;
 	desc.add_options()
-		("message,m", po::wvalue<std::wstring>()->required(), "commit message")
+		("message,m", po::wvalue<std::string>()->required(), "commit message")
 		;
 
 	po::variables_map vm;
-	po::store(po::basic_command_line_parser<wchar_t>(argc, argv)
+	po::store(po::command_line_parser(argc, argv)
 		.options(desc)
 		.positional(pos).run(), vm);
 	po::notify(vm);
 
 	init_for_git_commands();
 
-	std::wstring tree_id = write_tree(); // TODO: check if anything changed
+	std::string tree_id = write_tree(); // TODO: check if anything changed
 
 	Commit commit;
 	commit.tree_id = tree_id;
-	commit.committer = Globals::Config[L"user.name"];
-	commit.author = Globals::Config[L"user.name"];
-	commit.message = vm["message"].as<std::wstring>();
+	commit.committer = Globals::Config["user.name"];
+	commit.author = Globals::Config["user.name"];
+	commit.message = vm["message"].as<std::string>();
 
 	bool root_commit = !fs::exists(Globals::HeadFile);
 	bool not_detached = true;
-	std::wstring head;
+	std::string head;
 
 	if (!root_commit)
 	{
@@ -183,27 +184,27 @@ void cmd_commit(int argc, wchar_t* argv[])
 			commit.parents = { head }; // head is detached
 	}
 
-	std::wstring commit_id = write_commit(commit);
+	std::string commit_id = write_commit(commit);
 
 	if (!root_commit && not_detached)
 	{
 		write_branch(head, commit_id, Filesystem::FILE_FLAG_OVERWRITE);
-		message(boost::wformat(L"[%1% %2%] %3%") % head % commit_id % commit.message);
+		message(boost::format("[%1% %2%] %3%") % head % commit_id % commit.message);
 	}
 	else if (root_commit)
 	{
-		write_branch(L"master", commit_id, Filesystem::FILE_FLAG_OVERWRITE);
-		write_head(L"master");
-		message(boost::wformat(L"[master (root-commit) %1%] %2%") % commit_id % commit.message);
+		write_branch("master", commit_id, Filesystem::FILE_FLAG_OVERWRITE);
+		write_head("master");
+		message(boost::format("[master (root-commit) %1%] %2%") % commit_id % commit.message);
 	}
 	else if (!not_detached)
 	{
 		write_head(commit_id);
-		message(boost::wformat(L"[detached HEAD %1%] %2%") % commit_id % commit.message);
+		message(boost::format("[detached HEAD %1%] %2%") % commit_id % commit.message);
 	}
 }
 
-void cmd_tag(int argc, wchar_t* argv[])
+void cmd_tag(int argc, char* argv[])
 {
 	/////////////////////////////////////////////////////////////////////////
 	//	parse command line
@@ -211,12 +212,12 @@ void cmd_tag(int argc, wchar_t* argv[])
 	po::options_description root_desc;
 	root_desc.add_options()
 		("delete,d", po::value<bool>()->implicit_value(true)->zero_tokens())
-		("list,l", po::value<bool>()->implicit_value(true)->zero_tokens())
+		("list,", po::value<bool>()->implicit_value(true)->zero_tokens())
 		("force,f", po::value<bool>()->implicit_value(true)->zero_tokens())
 		;
 
 	po::variables_map root_vm;
-	po::store(po::basic_command_line_parser<wchar_t>(argc, argv).
+	po::store(po::command_line_parser(argc, argv).
 		options(root_desc).allow_unregistered().run(), root_vm);
 
 	if (root_vm.count("-D"))
@@ -239,7 +240,7 @@ void cmd_tag(int argc, wchar_t* argv[])
 			.add("tagname", -1)
 			;
 		desc.add_options()
-			("tagname", po::wvalue<std::wstring>())
+			("tagname", po::wvalue<std::string>())
 			;
 	}
 	else if (root_vm.count("list"))
@@ -256,14 +257,14 @@ void cmd_tag(int argc, wchar_t* argv[])
 			.add("commit", 1)
 			;
 		desc.add_options()
-			("tagname", po::wvalue<std::wstring>())
-			("commit", po::wvalue<std::wstring>())
+			("tagname", po::wvalue<std::string>())
+			("commit", po::wvalue<std::string>())
 			;
 	}
 
-	po::wcommand_line_parser actual_parser = po::basic_command_line_parser<wchar_t>(argc, argv).options(desc).positional(pos);
+	po::command_line_parser actual_parser = po::command_line_parser(argc, argv).options(desc).positional(pos);
 	po::store(actual_parser.run(), vm);
-	vm.merge(root_vm);
+	vm.insert(root_vm.begin(), root_vm.end());
 	/////////////////////////////////////////////////////////////////////////
 
 	init_for_git_commands();
@@ -274,18 +275,18 @@ void cmd_tag(int argc, wchar_t* argv[])
 	}
 	if (vm.count("delete"))
 	{
-		delete_tag(vm["tagname"].as<std::wstring>());
+		delete_tag(vm["tagname"].as<std::string>());
 
 	}
 	else if (vm.count("tagname"))
 	{
 		int flags = vm.count("force") ? Filesystem::FILE_FLAG_OVERWRITE : 0;
-		std::wstring commit = vm.count("commit") ? resolve_ref(vm["commit"].as<std::wstring>()) : resolve_head();
-		write_tag(vm["tagname"].as<std::wstring>(), commit, flags);
+		std::string commit = vm.count("commit") ? resolve_ref(vm["commit"].as<std::string>()) : resolve_head();
+		write_tag(vm["tagname"].as<std::string>(), commit, flags);
 	}
 }
 
-void cmd_read_tree(int argc, wchar_t* argv[])
+void cmd_read_tree(int argc, char* argv[])
 {
 	po::positional_options_description pos;
 	pos.add("tree-ish", 3);
@@ -293,11 +294,11 @@ void cmd_read_tree(int argc, wchar_t* argv[])
 	po::options_description desc;
 	desc.add_options()
 		(",m", po::value<bool>()->implicit_value(true)->zero_tokens())
-		("tree-ish", po::wvalue<std::vector<std::wstring>>(), "list of tree objects")
+		("tree-ish", po::wvalue<std::vector<std::string>>(), "list of tree objects")
 		;
 
 	po::variables_map vm;
-	po::store(po::basic_command_line_parser<wchar_t>(argc, argv)
+	po::store(po::command_line_parser(argc, argv)
 		.options(desc)
 		.positional(pos).run(), vm);
 	po::notify(vm);
@@ -305,11 +306,11 @@ void cmd_read_tree(int argc, wchar_t* argv[])
 	init_for_git_commands();
 
 	if (!vm.count("tree-ish"))
-		error(L"expected tree id");
+		error("expected tree id");
 
 	if (vm.count("-m"))
 	{
-		std::vector<std::wstring> tree_ish = vm["tree-ish"].as<std::vector<std::wstring>>();
+		std::vector<std::string> tree_ish = vm["tree-ish"].as<std::vector<std::string>>();
 		if (tree_ish.size() == 1)
 			read_tree_into_index(Globals::IndexFile, tree_ish[0]);
 		if (tree_ish.size() == 2)
@@ -320,10 +321,10 @@ void cmd_read_tree(int argc, wchar_t* argv[])
 			;
 	}
 	else
-		resolve_tree(vm["tree-ish"].as<std::vector<std::wstring>>()[0]);
+		resolve_tree(vm["tree-ish"].as<std::vector<std::string>>()[0]);
 }
 
-void cmd_write_tree(int argc, wchar_t* argv[])
+void cmd_write_tree(int argc, char* argv[])
 {
 	po::positional_options_description pos;
 
@@ -334,20 +335,20 @@ void cmd_write_tree(int argc, wchar_t* argv[])
 		;
 
 	po::variables_map vm;
-	po::store(po::basic_command_line_parser<wchar_t>(argc, argv)
+	po::store(po::command_line_parser(argc, argv)
 		.options(desc)
 		.positional(pos).run(), vm);
 	po::notify(vm);
 
 	init_for_git_commands();
 
-	fs::path prefix = vm.count("prefix") ? vm["prefix"].as<fs::path>() : L"";
+	fs::path prefix = vm.count("prefix") ? vm["prefix"].as<fs::path>() : "";
 	bool ignore_missing = vm.count("missing-ok");
 
 	message(write_tree(prefix, ignore_missing));
 }
 
-void cmd_branch(int argc, wchar_t* argv[])
+void cmd_branch(int argc, char* argv[])
 {
 	/////////////////////////////////////////////////////////////////////////
 	//	parse command line
@@ -357,7 +358,7 @@ void cmd_branch(int argc, wchar_t* argv[])
 		("delete,d", po::value<bool>()->implicit_value(true)->zero_tokens())
 		("move,m", po::value<bool>()->implicit_value(true)->zero_tokens())
 		("copy,c", po::value<bool>()->implicit_value(true)->zero_tokens())
-		("list,l", po::value<bool>()->implicit_value(true)->zero_tokens())
+		("list,", po::value<bool>()->implicit_value(true)->zero_tokens())
 		(",D", po::value<bool>()->implicit_value(true)->zero_tokens())
 		(",M", po::value<bool>()->implicit_value(true)->zero_tokens())
 		(",C", po::value<bool>()->implicit_value(true)->zero_tokens())
@@ -365,7 +366,7 @@ void cmd_branch(int argc, wchar_t* argv[])
 		;
 
 	po::variables_map root_vm;
-	po::store(po::basic_command_line_parser<wchar_t>(argc, argv).
+	po::store(po::command_line_parser(argc, argv).
 		options(root_desc).allow_unregistered().run(), root_vm);
 
 	if (root_vm.count("-D"))
@@ -398,7 +399,7 @@ void cmd_branch(int argc, wchar_t* argv[])
 			.add("branchname", -1)
 			;
 		desc.add_options()
-			("branchname", po::wvalue<std::vector<std::wstring>>())
+			("branchname", po::wvalue<std::vector<std::string>>())
 			;
 	}
 	else if (root_vm.count("move"))
@@ -409,8 +410,8 @@ void cmd_branch(int argc, wchar_t* argv[])
 			.add("newbranch", 1)
 			;
 		desc.add_options()
-			("oldbranch", po::wvalue<std::wstring>())
-			("newbranch", po::wvalue<std::wstring>())
+			("oldbranch", po::wvalue<std::string>())
+			("newbranch", po::wvalue<std::string>())
 			;
 	}
 	else if (root_vm.count("copy"))
@@ -420,8 +421,8 @@ void cmd_branch(int argc, wchar_t* argv[])
 			.add("newbranch", 1)
 			;
 		desc.add_options()
-			("oldbranch", po::wvalue<std::wstring>())
-			("newbranch", po::wvalue<std::wstring>())
+			("oldbranch", po::wvalue<std::string>())
+			("newbranch", po::wvalue<std::string>())
 			;
 	}
 	else if (root_vm.count("list"))
@@ -438,14 +439,14 @@ void cmd_branch(int argc, wchar_t* argv[])
 			.add("start-point", 1)
 			;
 		desc.add_options()
-			("branchname", po::wvalue<std::wstring>())
-			("start-point", po::wvalue<std::wstring>())
+			("branchname", po::wvalue<std::string>())
+			("start-point", po::wvalue<std::string>())
 			;
 	}
 
-	po::wcommand_line_parser actual_parser = po::basic_command_line_parser<wchar_t>(argc, argv).options(desc).positional(pos);
+	po::command_line_parser actual_parser = po::command_line_parser(argc, argv).options(desc).positional(pos);
 	po::store(actual_parser.run(), vm);
-	vm.merge(root_vm);
+	vm.insert(root_vm.begin(), root_vm.end());
 	/////////////////////////////////////////////////////////////////////////
 
 	init_for_git_commands();
@@ -458,41 +459,41 @@ void cmd_branch(int argc, wchar_t* argv[])
 	}
 	else if (vm.count("delete"))
 	{
-		for (const std::wstring& branch : vm["branchname"].as<std::vector<std::wstring>>())
+		for (const std::string& branch : vm["branchname"].as<std::vector<std::string>>())
 			delete_branch(branch, flags);
 	}
 	else if (vm.count("move"))
 	{
-		move_branch(vm["oldbranch"].as<std::wstring>(), vm["newbranch"].as<std::wstring>(), flags);
+		move_branch(vm["oldbranch"].as<std::string>(), vm["newbranch"].as<std::string>(), flags);
 	}
 	else if (vm.count("copy"))
 	{
-		copy_branch(vm["oldbranch"].as<std::wstring>(), vm["newbranch"].as<std::wstring>(), flags);
+		copy_branch(vm["oldbranch"].as<std::string>(), vm["newbranch"].as<std::string>(), flags);
 	}
 	else if (vm.count("branchname"))
 	{
-		std::wstring commit = vm.count("start-point") ? resolve_ref(vm["commit"].as<std::wstring>()) : resolve_head();
-		write_branch(vm["branchname"].as<std::wstring>(), commit, flags);
+		std::string commit = vm.count("start-point") ? resolve_ref(vm["commit"].as<std::string>()) : resolve_head();
+		write_branch(vm["branchname"].as<std::string>(), commit, flags);
 	}
 }
 
-void cmd_stash(int argc, wchar_t* argv[])
+void cmd_stash(int argc, char* argv[])
 {
-	error(L"command not implemented: stash");
+	error("command not implemented: stash");
 }
 
-void cmd_checkout(int argc, wchar_t* argv[])
+void cmd_checkout(int argc, char* argv[])
 {
 	po::positional_options_description pos;
 	pos.add("commit-id", 1);
 
 	po::options_description desc;
 	desc.add_options()
-		("commit-id", po::wvalue<std::wstring>())
+		("commit-id", po::wvalue<std::string>())
 		;
 
 	po::variables_map vm;
-	po::store(po::basic_command_line_parser<wchar_t>(argc, argv)
+	po::store(po::command_line_parser(argc, argv)
 		.options(desc)
 		.positional(pos).run(), vm);
 	po::notify(vm);
@@ -500,33 +501,33 @@ void cmd_checkout(int argc, wchar_t* argv[])
 	init_for_git_commands();
 
 	if (!vm.count("commit-id"))
-		error(L"expected commit id");
+		error("expected commit id");
 
-	const std::wstring name = vm["commit-id"].as<std::wstring>();
-	std::wstring commit_id = resolve_branch(name);
+	const std::string name = vm["commit-id"].as<std::string>();
+	std::string commit_id = resolve_branch(name);
 	checkout(commit_id);
 	write_head(name);
 }
 
-void cmd_merge(int argc, wchar_t* argv[])
+void cmd_merge(int argc, char* argv[])
 {
-	error(L"command not implemented: merge");
+	error("command not implemented: merge");
 }
 
-void cmd_cat_file(int argc, wchar_t* argv[])
+void cmd_cat_file(int argc, char* argv[])
 {
 	po::positional_options_description pos;
 	pos.add("object", 1);
 
 	po::options_description desc;
 	desc.add_options()
-		("object", po::wvalue<std::wstring>()->required())
+		("object", po::value<std::string>()->required())
 		(",t", po::value<bool>()->implicit_value(true)->zero_tokens())
 		(",p", po::value<bool>()->implicit_value(true)->zero_tokens())
 		;
 
 	po::variables_map vm;
-	po::store(po::basic_command_line_parser<wchar_t>(argc, argv)
+	po::store(po::basic_command_line_parser<char>(argc, argv)
 		.options(desc)
 		.positional(pos).run(), vm);
 	po::notify(vm);
@@ -536,10 +537,10 @@ void cmd_cat_file(int argc, wchar_t* argv[])
 
 	init_for_git_commands();
 
-	const std::wstring object_id = resolve_ref(vm["object"].as<std::wstring>());
+	const std::string object_id = resolve_ref(vm["object"].as<std::string>());
 
 	if (vm.count("-t"))
 		message(get_object_type(object_id));
 	else if (vm.count("-p"))
-		pretty_print_object(std::wcout, object_id);
+		pretty_print_object(std::cout, object_id);
 }

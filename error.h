@@ -5,13 +5,6 @@
 
 #include <boost/format.hpp>
 
-inline void error(const wchar_t* fmt...)
-{
-	wprintf(L"error: ");
-	wprintf(fmt);
-	exit(1);
-}
-
 inline void error(const char* fmt...)
 {
 	printf("error: ");
@@ -19,23 +12,23 @@ inline void error(const char* fmt...)
 	exit(1);
 }
 
-inline void error(const std::wstring &msg)
+inline void error(const std::string &msg)
 {
-	std::wcout << L"error: " << msg << L'\n';
+	std::cout << "error: " << msg << '\n';
 	exit(1);
 }
 
-inline void message(const std::wstring &msg)
+inline void message(const char* fmt...)
 {
-	std::wcout << msg << L'\n';
+	printf(fmt);
 }
 
-inline void message(const boost::wformat& msg)
+inline void message(const std::string& msg)
+{
+	message(msg.c_str());
+}
+
+inline void message(const boost::format& msg)
 {
 	message(msg.str());
-}
-
-inline void message(const wchar_t* fmt...)
-{
-	wprintf(fmt);
 }

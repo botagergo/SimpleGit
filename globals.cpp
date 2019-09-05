@@ -21,7 +21,7 @@ namespace Globals
 	size_t							IdPrefixLength = 2;
 
 	std::vector<Tag*>				Tags;
-	std::wstring					Head;
+	std::string					Head;
 
-	std::map<std::wstring, std::wstring>	Config;
+	std::map<std::string, std::string>	Config;
 };

@@ -9,6 +9,6 @@
 
 namespace fs = boost::filesystem;
 
-std::wstring			write_blob(const std::wstring& content);
-std::wstring			write_blob_from_file(const fs::path& filename);
-void					read_blob(const std::wstring& id, const fs::path& file);
+std::string			write_blob(const std::string& content);
+std::string			write_blob_from_file(const fs::path& filename);
+void					read_blob(const std::string& id, const fs::path& file);

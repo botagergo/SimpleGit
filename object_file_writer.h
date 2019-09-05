@@ -8,16 +8,16 @@ class ObjectFileWriter
 	friend ObjectFileWriter& operator<< (ObjectFileWriter& writer, T val);
 	template <typename T>
 	friend ObjectFileWriter& operator<< (ObjectFileWriter&& writer, T val);
-	friend ObjectFileWriter& operator<<(ObjectFileWriter& os, std::wostream& (*pf)(std::wostream&));
+	friend ObjectFileWriter& operator<<(ObjectFileWriter& os, std::ostream& (*pf)(std::ostream&));
 
 public:
 	~ObjectFileWriter() { save(); }
-	std::wstring save();
-	std::wstring id() const;
+	std::string save();
+	std::string id() const;
 
 private:
-	std::wstringstream	_stream;
-	std::wstring		_id;
+	std::stringstream	_stream;
+	std::string		_id;
 	bool				_saved = false;
 };
 
@@ -35,4 +35,4 @@ ObjectFileWriter& operator<< (ObjectFileWriter&& writer, T val)
 	return writer;
 }
 
-ObjectFileWriter& operator<<(ObjectFileWriter& writer, std::wostream& (*pf)(std::wostream&));
+ObjectFileWriter& operator<<(ObjectFileWriter& writer, std::ostream& (*pf)(std::ostream&));

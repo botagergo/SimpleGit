@@ -7,16 +7,16 @@
 #include "object_file_writer.h"
 #include "tree.h"
 
-void merge_tree_into_index(const fs::path& index_file, const std::wstring& tree_id)
+void merge_tree_into_index(const fs::path& index_file, const std::string& tree_id)
 {
-	std::wofstream out_stream;
-	std::wifstream index_in, tree_in;
+	std::ofstream out_stream;
+	std::ifstream index_in, tree_in;
 
-	fs::path tmp_index_file = index_file.wstring() + L"_TMP";
+	fs::path tmp_index_file = index_file.string() + "_TMP";
 
-	out_stream.open(tmp_index_file.wstring());
-	Filesystem::open(index_file, (std::wfstream&)index_in, std::ios_base::in);
-	if (Filesystem::open_object(tree_id, tree_in) != L"tree")
+	out_stream.open(tmp_index_file.string());
+	Filesystem::open(index_file, (std::fstream&)index_in, std::ios_base::in);
+	if (Filesystem::open_object(tree_id, tree_in) != "tree")
 		throw NotTreeException(tree_id);
 
 	TreeRecord index_record, tree_record;
@@ -27,39 +27,39 @@ void merge_tree_into_index(const fs::path& index_file, const std::wstring& tree_
 	{
 		if (index_record.path < tree_record.path)
 		{
-			out_stream << IndexRecord(index_record.id, index_record.path) << L'\n';
+			out_stream << IndexRecord(index_record.id, index_record.path) << '\n';
 			index_in >> index_record;
 		}
 		else if (tree_record.path < index_record.path)
 		{
-			out_stream << tree_record << L'\n';
+			out_stream << tree_record << '\n';
 			tree_in >> index_record;
 		}
 		else if (index_record.id == tree_record.id)
 		{
-			out_stream << index_record << L'\n';
+			out_stream << index_record << '\n';
 			tree_in >> tree_record;
 		}
-		else if (index_record.kind == L"blob")
+		else if (index_record.kind == "blob")
 		{
 			throw MergeConflictException();
 		}
-		else /*if (tree1_record.kind == L"tree")*/
+		else /*if (tree1_record.kind == "tree")*/
 		{
-			std::wstring new_tree_id = merge_tree(index_record.id, tree_record.id);
-			out_stream << TreeRecord(L"tree", new_tree_id, index_record.path) << L'\n';
+			std::string new_tree_id = merge_tree(index_record.id, tree_record.id);
+			out_stream << TreeRecord("tree", new_tree_id, index_record.path) << '\n';
 		}
 	}
 
 	while (index_in)
 	{
-		out_stream << index_record << L'\n';
+		out_stream << index_record << '\n';
 		tree_in >> index_record;
 	}
 
 	while (tree_in)
 	{
-		out_stream << tree_record << L'\n';
+		out_stream << tree_record << '\n';
 		tree_in >> tree_record;
 	}
 
@@ -69,14 +69,14 @@ void merge_tree_into_index(const fs::path& index_file, const std::wstring& tree_
 
 
 
-std::wstring merge_tree(const std::wstring& tree1_id, const std::wstring& tree2_id)
+std::string merge_tree(const std::string& tree1_id, const std::string& tree2_id)
 {
 	ObjectFileWriter new_tree;
-	std::wifstream tree1_in, tree2_in;
+	std::ifstream tree1_in, tree2_in;
 
-	if (Filesystem::open_object(tree1_id, tree1_in) != L"tree")
+	if (Filesystem::open_object(tree1_id, tree1_in) != "tree")
 		throw NotTreeException(tree1_id);
-	if (Filesystem::open_object(tree2_id, tree2_in) != L"tree")
+	if (Filesystem::open_object(tree2_id, tree2_in) != "tree")
 		throw NotTreeException(tree2_id);
 
 	TreeRecord tree1_record, tree2_record;
@@ -87,39 +87,39 @@ std::wstring merge_tree(const std::wstring& tree1_id, const std::wstring& tree2_
 	{
 		if (tree1_record.path < tree2_record.path)
 		{
-			new_tree << tree1_record << L'\n';
+			new_tree << tree1_record << '\n';
 			tree1_in >> tree1_record;
 		}
 		else if (tree2_record.path < tree1_record.path)
 		{
-			new_tree << tree2_record << L'\n';
+			new_tree << tree2_record << '\n';
 			tree2_in >> tree1_record;
 		}
 		else if (tree1_record.id == tree2_record.id)
 		{
-			new_tree << tree1_record << L'\n';
+			new_tree << tree1_record << '\n';
 			tree2_in >> tree2_record;
 		}
-		else if (tree1_record.kind == L"blob")
+		else if (tree1_record.kind == "blob")
 		{
 			throw MergeConflictException();
 		}
-		else /*if (tree1_record.kind == L"tree")*/
+		else /*if (tree1_record.kind == "tree")*/
 		{
-			std::wstring new_tree_id = merge_tree(tree1_record.id, tree2_record.id);
-			new_tree << TreeRecord(L"tree", new_tree_id, tree1_record.path) << L'\n';
+			std::string new_tree_id = merge_tree(tree1_record.id, tree2_record.id);
+			new_tree << TreeRecord("tree", new_tree_id, tree1_record.path) << '\n';
 		}
 	}
 
 	while (tree1_in)
 	{
-		new_tree << tree1_record << L'\n';
+		new_tree << tree1_record << '\n';
 		tree1_in >> tree1_record;
 	}
 
 	while (tree2_in)
 	{
-		new_tree << tree2_record << L'\n';
+		new_tree << tree2_record << '\n';
 		tree2_in >> tree2_record;
 	}
 

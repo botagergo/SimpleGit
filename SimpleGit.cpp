@@ -21,19 +21,19 @@
 //#define TEST
 //#define WAIT_FOR_ENTER
 
-std::map<std::wstring, void (*)(int argc, wchar_t* argv[])> command_map {
-	{L"init", cmd_init},
-	{L"add", cmd_add},
-	{L"update-index", cmd_update_index},
-	{L"commit", cmd_commit},
-	{L"tag", cmd_tag},
-	{L"branch", cmd_branch},
-	{L"stash", cmd_stash},
-	{L"checkout", cmd_checkout},
-	{L"merge", cmd_merge},
-	{L"read-tree", cmd_read_tree},
-	{L"write-tree", cmd_write_tree},
-	{L"cat-file", cmd_cat_file},
+std::map<std::string, void (*)(int argc, char* argv[])> command_map {
+	{"init", cmd_init},
+	{"add", cmd_add},
+	{"update-index", cmd_update_index},
+	{"commit", cmd_commit},
+	{"tag", cmd_tag},
+	{"branch", cmd_branch},
+	{"stash", cmd_stash},
+	{"checkout", cmd_checkout},
+	{"merge", cmd_merge},
+	{"read-tree", cmd_read_tree},
+	{"write-tree", cmd_write_tree},
+	{"cat-file", cmd_cat_file},
 };
 
 void clear_filesystem()
@@ -48,31 +48,31 @@ int test()
 
 void initPathConstants()
 {
-	Globals::DefaultSimpleGitDir = L".simplegit";
+	Globals::DefaultSimpleGitDir = ".simplegit";
 	const char* gitdir = std::getenv("SIMPLEGIT_DIR");
 	if (gitdir)
 		Globals::SimpleGitDir = to_wide_string(gitdir);
 	else
 		Globals::SimpleGitDir = Globals::DefaultSimpleGitDir;
 
-	Globals::DefaultSimpleGitConfig = Globals::SimpleGitDir / L"config";
+	Globals::DefaultSimpleGitConfig = Globals::SimpleGitDir / "config";
 	const char* config = std::getenv("SIMPLEGIT_CONFIG");
 	if (config)
 		Globals::ConfigFile = Globals::SimpleGitDir / to_wide_string(config);
 	else
 		Globals::ConfigFile = Globals::DefaultSimpleGitConfig;
 
-	Globals::ObjectDir = Globals::SimpleGitDir / L"objects";
-	Globals::RefDir = Globals::SimpleGitDir / L"refs";
-	Globals::TagDir = Globals::RefDir / L"tags";
-	Globals::BranchDir = Globals::RefDir / L"heads";
+	Globals::ObjectDir = Globals::SimpleGitDir / "objects";
+	Globals::RefDir = Globals::SimpleGitDir / "refs";
+	Globals::TagDir = Globals::RefDir / "tags";
+	Globals::BranchDir = Globals::RefDir / "heads";
 
-	Globals::IndexFile = Globals::SimpleGitDir / L"INDEX";
-	Globals::HeadFile = Globals::SimpleGitDir / L"HEAD";
+	Globals::IndexFile = Globals::SimpleGitDir / "INDEX";
+	Globals::HeadFile = Globals::SimpleGitDir / "HEAD";
 }
 
 #include <fstream>
-int wmain(int argc, wchar_t* argv[])
+int main(int argc, char* argv[])
 {
 #ifdef WAIT_FOR_ENTER
 	{std::string str; std::cin >> str; }
@@ -84,7 +84,7 @@ int wmain(int argc, wchar_t* argv[])
 			;
 		else
 		{
-			std::wstring command = argv[1];
+			std::string command = argv[1];
 			auto cmd = command_map.find(command);
 			if (cmd != command_map.end())
 				try{
@@ -93,13 +93,13 @@ int wmain(int argc, wchar_t* argv[])
 					error(e.what());
 				}
 			else
-				error(std::wstring(L"unknown command: ") + command);
+				error(std::string("unknown command: ") + command);
 		}
 
 		return 0;
 	}
 	catch (const boost::program_options::unknown_option& e)
 	{
-		error(L"unknown option: %s", e.what());
+		error("unknown option: %s", e.what());
 	}
 }
