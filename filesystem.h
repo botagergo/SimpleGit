@@ -46,6 +46,8 @@ namespace Filesystem
 			std::istreambuf_iterator<char>());
 	}
 
+
+
 	void write_content(const fs::path &file, const std::string &content, int flags = 0);
 	void write_content(const fs::path& file, std::istream& in_stream, int flags = 0);
 	void write_content(std::ostream& out_stream, std::istream& in_stream);
