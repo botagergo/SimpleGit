@@ -1,8 +1,12 @@
 #include <fstream>
 #include <windows.h>
 
+#include <boost/filesystem.hpp>
+
 #include "exception.h"
 #include "filesystem.h"
+
+namespace fs = boost::filesystem;
 
 namespace Filesystem
 {
@@ -22,6 +26,12 @@ namespace Filesystem
 		std::string ret = read_content(stream);
 		stream.close();
 		return ret;
+	}
+
+	std::string read_content(std::istream& stream)
+	{
+		return std::string((std::istreambuf_iterator<char>(stream)),
+			std::istreambuf_iterator<char>());
 	}
 
 	void write_content(const fs::path &file, const std::string &content, int flags)

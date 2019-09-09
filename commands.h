@@ -1,8 +1,5 @@
 #pragma once
 
-#include <string>
-#include <vector>
-
 void cmd_init(int argc, char* argv[]);
 void cmd_add(int argc, char* argv[]);
 void cmd_update_index(int argc, char* argv[]);
@@ -15,3 +12,5 @@ void cmd_stash(int argc, char* argv[]);
 void cmd_checkout(int argc, char* argv[]);
 void cmd_merge(int argc, char* argv[]);
 void cmd_cat_file(int argc, char* argv[]);
+void cmd_ls_files(int argc, char* argv[]);
+void cmd_config(int argc, char* argv[]);

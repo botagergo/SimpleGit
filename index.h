@@ -2,17 +2,28 @@
 
 #include <ctime>
 #include <string>
+#include <vector>
 
-#include <boost/filesystem.hpp>
+#include <boost/filesystem/path.hpp>
 
-namespace fs = boost::filesystem;
+#include "defs.h"
 
 enum UpdateIndexFlags
 {
+	// updates the matching record, if the file exist
 	UPDATE_INDEX_MODIFY = 1,
+
+	// adds record to index, if doesn't exist
 	UPDATE_INDEX_ADD	= 2,
+
+	// if the file doesn't exist, removes the matching record
+	// throws exception otherwise
 	UPDATE_INDEX_REMOVE = 4,
+
+	// removes the matching record
 	UPDATE_INDEX_FORCE_REMOVE = 12,
+
+	// removes the matching record, if the file doesn't exist
 	UPDATE_INDEX_REMOVE_IF_DELETED = 16,
 };
 
@@ -21,9 +32,10 @@ struct IndexRecord
 	IndexRecord(std::string id, fs::path path) : id(id), path(path) {}
 	IndexRecord() {}
 
-	std::string	id;
+	std::string		id;
 	fs::path		path;
 	time_t			mtime;
+	std::string		mode;
 };
 
 std::ostream& operator<<(std::ostream& ostream, const IndexRecord& record);

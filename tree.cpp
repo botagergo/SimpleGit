@@ -1,6 +1,8 @@
 #include <fstream>
 #include <iostream>
 
+#include <boost/lexical_cast.hpp>
+
 #include "blob.h"
 #include "commit.h"
 #include "exception.h"
@@ -9,16 +11,17 @@
 #include "helper.h"
 #include "index.h"
 #include "object.h"
-#include "object_file_writer.h"
 #include "tree.h"
+
 
 std::ostream& operator<<(std::ostream& ostream, const TreeRecord& record)
 {
-	return ostream << record.kind << ' ' << record.id << ' ' << record.path.string();
+	return ostream << record.kind << " " << record.id << " " << record.path.string() << "\n";
 }
 
 std::istream& operator>>(std::istream& istream, TreeRecord& record)
 {
+	istream >> record.mode >> std::ws;
 	istream >> record.kind >> record.id >> std::ws;
 	std::string line;
 	auto& ret = std::getline(istream, line);
@@ -47,7 +50,7 @@ std::string write_tree(const fs::path& prefix, bool ignore_missing)
 		if (!ignore_missing && !Filesystem::object_exists(record.id))
 			throw ObjectNotFoundException(record.id);
 
-		history[curr_level].push_back(TreeRecord("blob", record.id, record.path));
+		history[curr_level].push_back(TreeRecord("blob", "100644", record.id, record.path));
 
 		while (curr_level > diff_pos)
 		{
@@ -59,7 +62,7 @@ std::string write_tree(const fs::path& prefix, bool ignore_missing)
 			curr_level--;
 			if (record.path == prefix)
 				ret_id = id;
-			history[curr_level].push_back(TreeRecord("tree", id, record.path));
+			history[curr_level].push_back(TreeRecord("tree", "040000", id, record.path));
 		}
 	};
 
@@ -102,6 +105,23 @@ std::string write_tree(const fs::path& prefix, bool ignore_missing)
 		return root_id;
 }
 
+std::string write_tree(const std::vector<TreeRecord>& records)
+{
+	ObjectWriter writer("tree");
+
+	for (const TreeRecord& record : records)
+	{
+		writer << record.mode << ' ' << record.path.string() << '\0';
+
+		for (int i = 0; i < 20; i++)
+		{
+			writer << (char)((hex_char_to_byte(record.id[2 * i]) << 4) | hex_char_to_byte(record.id[2 * i + 1]));
+		}
+	}
+
+	return writer.save();
+}
+
 void read_tree(const std::string& tree_id, const fs::path& root_dir)
 {
 	std::ifstream in_stream;
@@ -125,44 +145,29 @@ void read_tree(const std::string& tree_id, const fs::path& root_dir)
 	}
 }
 
-std::string write_tree(const std::vector<TreeRecord>& records)
+TreeReader& TreeReader::operator>>(TreeRecord& record)
 {
-	ObjectFileWriter writer;
-
-	writer << "tree" << '\n';
-
-	for (const TreeRecord& record : records)
-		writer << record << "\n";
-
-	return writer.save();
-}
-
-std::string resolve_tree(const std::string& name)
-{
-	if (name.size() >= 4)
+	if (_curr_pos >= _end)
 	{
-		std::string object_id = expand_object_id_prefix(name);
-
-		std::ifstream in_stream;
-		std::string object_type = open_object(in_stream, object_id);
-
-		if (object_type == "commit")
-		{
-			Commit commit = read_commit(in_stream);
-			return commit.tree_id;
-		}
-		else if (object_type == "tree")
-			return object_id;
-		else
-			throw NotTreeException(name);
+		_valid = false;
+		return *this;
 	}
 
-	throw ResolveObjectException(name);
-}
+	char mode[10];
+	sscanf_s(_curr_pos, "%s", mode, 10);
+	record.mode = mode;
+	_curr_pos += strlen(mode) + 1;
+	record.path = _curr_pos;
+	_curr_pos += record.path.size() + 1;
+	record.id.resize(40);
+	for (int i = 0; i < 20; i++)
+	{
+		unsigned char ch = _curr_pos[i];
+		record.id[2 * i] = int_to_hex_char(ch >> 4);
+		record.id[2 * i + 1] = int_to_hex_char(ch & 15);
+	}
+	_curr_pos += 20;
+	record.kind = record.mode[0] == '1' ? "blob" : "tree";
 
-void open_tree(std::ifstream& in_stream, const std::string& tree_id)
-{
-	std::string object_type = open_object(in_stream, tree_id);
-	if (object_type != "tree")
-		throw NotTreeException(tree_id);
+	return *this;
 }

@@ -5,23 +5,20 @@
 #include "exception.h"
 #include "filesystem.h"
 #include "helper.h"
-#include "object_file_writer.h"
+#include "object.h"
 
 std::string write_blob(const std::string &content)
 {
-	return (ObjectFileWriter() << "blob" << '\n' << content).save();
+	return (ObjectWriter("blob") << content).save();
 }
 
-void read_blob(const std::string& id, const fs::path& file)
+void read_blob(const std::string& blob_id, const fs::path& file)
 {
-	std::ifstream in_stream;
-	std::string object_type = Filesystem::open_object(id, in_stream);
-	if (object_type != "blob")
-		throw NotBlobException(id);
-
 	std::ofstream out_stream;
 	Filesystem::open(file, out_stream, true);
-	Filesystem::write_content(out_stream, in_stream);
+
+	Object blob(blob_id);
+	blob.get_blob_reader()->read_content(out_stream);
 }
 
 std::string write_blob_from_file(const fs::path &file)

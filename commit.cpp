@@ -1,6 +1,7 @@
 #include <cassert>
 #include <fstream>
 #include <iostream>
+#include <sstream>
 
 #include "branch.h"
 #include "commit.h"
@@ -9,96 +10,69 @@
 #include "globals.h"
 #include "helper.h"
 #include "object.h"
-#include "object_file_writer.h"
-#include "tag.h"
 
-Commit read_commit(const std::string& commit_id)
-{
-	std::ifstream in_stream;
-	open_commit(in_stream, commit_id);
-
-	fs::path commit_file = Filesystem::get_object_path(commit_id);
-
-	try {
-		return read_commit(in_stream);
-	}
-	catch (CommitFileCorrupted) {
-		throw CommitFileCorrupted(commit_file);
-	}
-}
-
-Commit read_commit(std::istream& in_stream)
+std::ostream& CommitReader::pretty_print(std::ostream& out_stream)
 {
 	Commit commit;
-	std::string str;
+	*this >> commit;
+	out_stream << commit;
+	return out_stream;
+}
 
-	in_stream >> str;
-	if (str != "tree")
-		throw CommitFileCorrupted("");
-	in_stream >> commit.tree_id;
+CommitReader& CommitReader::operator>>(Commit& commit)
+{
+	std::istringstream ss(_curr_pos);
+	std::string line;
 
-	in_stream >> str;
-	if (str != "parents")
-		throw CommitFileCorrupted("");
-	std::getline(in_stream, str);
-	std::stringstream ss(str);
-	while (ss >> str)
-		commit.parents.push_back(str);
+	while (std::getline(ss, line))
+	{
+		std::istringstream line_ss(line);
+		std::string record_type;
+		line_ss >> record_type;
 
-	in_stream >> str >> std::ws;
-	if (str != "author")
-		throw CommitFileCorrupted("");
-	std::getline(in_stream, str);
-	commit.author = str;
+		if (!line_ss)
+			break;
 
-	in_stream >> str >> std::ws;
-	if (str != "committer")
-		throw CommitFileCorrupted("");
-	in_stream >> commit.committer;
+		if (record_type == "tree")
+			line_ss >> commit.tree_id;
+		else if (record_type == "parent")
+		{
+			std::string parent;
+			line_ss >> parent;
+			commit.parents.push_back(parent);
+		}
+		else if (record_type == "author")
+			line_ss >> commit.author;
+		else if (record_type == "committer")
+			line_ss >> commit.committer;
+	}
 
-	in_stream >> std::ws;
+	commit.message = Filesystem::read_content(ss);
 
-	commit.message = Filesystem::read_content(in_stream);
-
-	return commit;
+	return *this;
 }
 
 std::string write_commit(const Commit& commit)
 {
-	ObjectFileWriter writer;
-	writer << "commit" << "\n";
-	writer << "tree" << ' ' << commit.tree_id << "\n";
-	writer << "parents";
+	ObjectWriter writer("commit");
+
+	writer << "tree " << commit.tree_id << '\n';
 	for (const std::string& parent : commit.parents)
-		writer << ' ' << parent;
-	writer << "\n";
-	writer << "author" << ' ' << commit.author << "\n";
-	writer << "committer" << ' ' << commit.committer << "\n";
+		writer << "parent " << parent << '\n';
+	writer << "author " << commit.author << '\n';
+	writer << "committer " << commit.committer << "\n\n";
 	writer << commit.message;
+
 	return writer.save();
 }
 
-std::string resolve_ref(const std::string& ref)
+std::ostream& operator<< (std::ostream& out_stream, const Commit& commit)
 {
-	// TODO: resolve tags
-	try {
-		if (is_tag(ref))
-			return resolve_tag(ref);
-		if (is_branch(ref))
-			return resolve_branch(ref);
-		else if (ref.size() >= 4)
-			return expand_object_id_prefix(ref);
-		else
-			throw ResolveRefException(ref);
-	}
-	catch (const std::exception& e) {
-		throw ResolveRefException(ref);
-	}
-}
-
-void open_commit(std::ifstream& in_stream, const std::string& commit_id)
-{
-	std::string object_type = open_object(in_stream, commit_id);
-	if (object_type != "commit")
-		throw NotCommitException(commit_id);
+	out_stream << "tree" << "\t\t" << commit.tree_id << '\n';
+	for (const std::string& parent : commit.parents)
+		out_stream << "parent" << "\t\t" << parent << '\n';
+	out_stream << "author" << "\t\t" << commit.author << '\n';
+	out_stream << "committer" << '\t' << commit.committer << '\n';
+	out_stream << commit.message;
+	return out_stream;
 }

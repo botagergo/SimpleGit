@@ -19,7 +19,7 @@
 #include "tag.h"
 
 //#define TEST
-//#define WAIT_FOR_ENTER
+#define WAIT_FOR_ENTER
 
 std::map<std::string, void (*)(int argc, char* argv[])> command_map {
 	{"init", cmd_init},
@@ -34,6 +34,8 @@ std::map<std::string, void (*)(int argc, char* argv[])> command_map {
 	{"read-tree", cmd_read_tree},
 	{"write-tree", cmd_write_tree},
 	{"cat-file", cmd_cat_file},
+	{"ls-files", cmd_ls_files},
+	{"config", cmd_config},
 };
 
 void clear_filesystem()
@@ -51,14 +53,14 @@ void initPathConstants()
 	Globals::DefaultSimpleGitDir = ".simplegit";
 	const char* gitdir = std::getenv("SIMPLEGIT_DIR");
 	if (gitdir)
-		Globals::SimpleGitDir = to_wide_string(gitdir);
+		Globals::SimpleGitDir = gitdir;
 	else
 		Globals::SimpleGitDir = Globals::DefaultSimpleGitDir;
 
 	Globals::DefaultSimpleGitConfig = Globals::SimpleGitDir / "config";
 	const char* config = std::getenv("SIMPLEGIT_CONFIG");
 	if (config)
-		Globals::ConfigFile = Globals::SimpleGitDir / to_wide_string(config);
+		Globals::ConfigFile = Globals::SimpleGitDir / config;
 	else
 		Globals::ConfigFile = Globals::DefaultSimpleGitConfig;
 

@@ -23,7 +23,8 @@ void set_working_directory(const std::string& tree_id)
 
 void checkout(const std::string& commit_id)
 {
-	Commit commit = read_commit(commit_id);
+	Commit commit;
+	*Object(commit_id).get_commit_reader() >> commit;
 	read_tree_into_index(Globals::IndexFile, commit.tree_id);
 	set_working_directory(commit.tree_id);
 }

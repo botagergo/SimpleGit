@@ -1,4 +1,4 @@
-#include <filesystem>
+#include <boost/filesystem.hpp>
 
 #include "branch.h"
 #include "error.h"
@@ -6,6 +6,8 @@
 #include "filesystem.h"
 #include "globals.h"
 #include "helper.h"
+
+namespace fs = boost::filesystem;
 
 void write_branch(const std::string& name, const std::string& object_id, int flags)
 {
@@ -65,11 +67,6 @@ bool is_branch(const std::string& name)
 	return fs::exists(Globals::BranchDir / name);
 }
 
-std::string resolve_branch(const std::string& branch_name)
-{
-	return Filesystem::read_content(Globals::BranchDir / branch_name);
-}
-
 void write_head(const std::string& name)
 {
 	Filesystem::write_content(Globals::HeadFile, name, Filesystem::FILE_FLAG_OVERWRITE);
@@ -78,20 +75,6 @@ void write_head(const std::string& name)
 std::string read_head()
 {
 	return Filesystem::read_content(Globals::HeadFile);
-}
-
-std::string resolve_head()
-{
-	try {
-		std::string name = Filesystem::read_content(Globals::HeadFile);
-		if (is_branch(name))
-			return resolve_branch(name);
-		else
-			return name;
-	}
-	catch (const FileOpenException&) {
-		throw HeadDoesntExistException();
-	}
 }
 
 void list_branches()

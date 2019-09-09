@@ -1,13 +1,11 @@
 #pragma once
 
-#include <filesystem>
 #include <map>
 #include <string>
 
-#include <boost/filesystem.hpp>
+#include <boost/filesystem/path.hpp>
 
-struct Tag;
-namespace fs = boost::filesystem;
+#include "defs.h"
 
 namespace Globals
 {
@@ -24,7 +22,8 @@ namespace Globals
 	extern fs::path			ConfigFile;
 	extern fs::path			HeadFile;
 
-	extern size_t							IdPrefixLength;
-
 	extern std::map<std::string, std::string>	Config;
+
+	extern const size_t		IdPrefixLength;
+	extern const size_t		MaxObjectHeaderSize;
 };

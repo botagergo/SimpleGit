@@ -1,4 +1,3 @@
-#include <filesystem>
 #include <map>
 
 #include "globals.h"
@@ -18,10 +17,10 @@ namespace Globals
 	fs::path			IndexFile;
 	fs::path			HeadFile;
 
-	size_t							IdPrefixLength = 2;
-
-	std::vector<Tag*>				Tags;
-	std::string					Head;
+	std::string			Head;
 
 	std::map<std::string, std::string>	Config;
+
+	const size_t		IdPrefixLength = 2;
+	const size_t		MaxObjectHeaderSize = 32;
 };

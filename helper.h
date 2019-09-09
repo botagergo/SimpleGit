@@ -1,17 +1,12 @@
 #pragma once
 
-#include <filesystem>
 #include <string>
 
-#include "globals.h"
-#include "istream_line_iterator.h"
+#include <boost/filesystem/path.hpp>
 
-namespace fs = boost::filesystem;
+#include "defs.h"
 
-std::wstring to_wide_string(const std::string &str);
-std::string to_string(const std::wstring &str);
-
-std::string get_hash(const std::string &text);
+std::string get_hash(const char* text, size_t size);
 std::string get_file_hash(const fs::path &file);
 
 template<class ForwardIt, class T>
@@ -23,3 +18,6 @@ ForwardIt binary_search(ForwardIt first, ForwardIt last, const T& value)
 	else
 		return last;
 }
+
+char int_to_hex_char(unsigned a);
+char hex_char_to_byte(char ch);

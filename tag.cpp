@@ -35,11 +35,6 @@ void delete_tag(const std::string& tag_name)
 		throw TagDoesNotExistException(tag_name);
 }
 
-std::string resolve_tag(const std::string& tag_name)
-{
-	return expand_object_id_prefix(read_tag(tag_name));
-}
-
 void list_tags()
 {
 	if (!fs::exists(Globals::TagDir))

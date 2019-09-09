@@ -3,11 +3,10 @@
 #include <sys/stat.h>
 #include <windows.h>
 
-#include <boost/filesystem.hpp>
+#include <boost/filesystem/path.hpp>
 
+#include "defs.h"
 #include "exception.h"
-
-namespace fs = boost::filesystem;
 
 namespace Filesystem
 {
@@ -32,21 +31,13 @@ namespace Filesystem
 		stream.open(path.string());
 
 		if (!stream)
-			throw FileOpenException(path);
+			throw Exception(boost::format("cannot open file: %1%") % path);
 	}
 
 	void create_directory(const fs::path& dir, bool hidden = false);
 
 	std::string read_content(const fs::path& file);
-
-	template <typename InStream>
-	std::string read_content(InStream& stream)
-	{
-		return std::string((std::istreambuf_iterator<char>(stream)),
-			std::istreambuf_iterator<char>());
-	}
-
-
+	std::string read_content(std::istream& stream);
 
 	void write_content(const fs::path &file, const std::string &content, int flags = 0);
 	void write_content(const fs::path& file, std::istream& in_stream, int flags = 0);

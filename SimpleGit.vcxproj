@@ -102,7 +102,7 @@
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <ClCompile>
       <PrecompiledHeader>NotUsing</PrecompiledHeader>
-      <WarningLevel>Level3</WarningLevel>
+      <WarningLevel>Level1</WarningLevel>
       <Optimization>Disabled</Optimization>
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
@@ -173,7 +173,6 @@
     <ClCompile Include="index_two_tree_iterator.cpp" />
     <ClCompile Include="merge.cpp" />
     <ClCompile Include="object.cpp" />
-    <ClCompile Include="object_file_writer.cpp" />
     <ClCompile Include="ref.cpp" />
     <ClCompile Include="sha1.cpp" />
     <ClCompile Include="SimpleGit.cpp" />
@@ -202,7 +201,7 @@
     <ClInclude Include="commands.h" />
     <ClInclude Include="commit.h" />
     <ClInclude Include="config.h" />
-    <ClInclude Include="defines.h" />
+    <ClInclude Include="defs.h" />
     <ClInclude Include="error.h" />
     <ClInclude Include="exception.h" />
     <ClInclude Include="filesystem.h" />
@@ -212,12 +211,10 @@
     <ClInclude Include="index_two_tree_iterator.h" />
     <ClInclude Include="merge.h" />
     <ClInclude Include="object.h" />
-    <ClInclude Include="object_file_writer.h" />
     <ClInclude Include="ref.h" />
     <ClInclude Include="sha1.h" />
     <ClInclude Include="tag.h" />
     <ClInclude Include="tree.h" />
-    <ClInclude Include="working_directory.h" />
     <ClInclude Include="zlib\crc32.h" />
     <ClInclude Include="zlib\deflate.h" />
     <ClInclude Include="zlib\gzguts.h" />

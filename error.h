@@ -5,6 +5,8 @@
 
 #include <boost/format.hpp>
 
+#include "defs.h"
+
 inline void error(const char* fmt...)
 {
 	printf("error: ");
@@ -31,4 +33,10 @@ inline void message(const std::string& msg)
 inline void message(const boost::format& msg)
 {
 	message(msg.str());
+}
+
+template <typename T>
+inline void message(const T& msg)
+{
+	message(std::to_string(msg));
 }

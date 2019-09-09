@@ -20,6 +20,8 @@
 #include "helper.h"
 #include "index.h"
 #include "merge.h"
+#include "object.h"
+#include "ref.h"
 #include "tag.h"
 #include "tree.h"
 
@@ -151,7 +153,7 @@ void cmd_commit(int argc, char* argv[])
 
 	po::options_description desc;
 	desc.add_options()
-		("message,m", po::wvalue<std::string>()->required(), "commit message")
+		("message,m", po::value<std::string>()->required(), "commit message")
 		;
 
 	po::variables_map vm;
@@ -161,6 +163,8 @@ void cmd_commit(int argc, char* argv[])
 	po::notify(vm);
 
 	init_for_git_commands();
+	if (Globals::Config.find("user.name") == Globals::Config.end())
+		throw Exception("user name not defined");
 
 	std::string tree_id = write_tree(); // TODO: check if anything changed
 
@@ -523,6 +527,7 @@ void cmd_cat_file(int argc, char* argv[])
 	desc.add_options()
 		("object", po::value<std::string>()->required())
 		(",t", po::value<bool>()->implicit_value(true)->zero_tokens())
+		(",s", po::value<bool>()->implicit_value(true)->zero_tokens())
 		(",p", po::value<bool>()->implicit_value(true)->zero_tokens())
 		;
 
@@ -533,14 +538,68 @@ void cmd_cat_file(int argc, char* argv[])
 	po::notify(vm);
 
 	conflicting_options(vm, "-t", "-p");
-	at_least_one_required(vm, { "-t", "-p" });
+	conflicting_options(vm, "-t", "-s");
+	conflicting_options(vm, "-p", "-s");
+
+	at_least_one_required(vm, { "-t", "-p", "-s"});
 
 	init_for_git_commands();
 
 	const std::string object_id = resolve_ref(vm["object"].as<std::string>());
 
 	if (vm.count("-t"))
-		message(get_object_type(object_id));
+		message(Object(object_id).kind());
+	else if (vm.count("-s"))
+		message(Object(object_id).size());
 	else if (vm.count("-p"))
-		pretty_print_object(std::cout, object_id);
+		Object(object_id).get_reader()->pretty_print(std::cout);
+}
+
+void cmd_ls_files(int argc, char* argv[])
+{
+	po::positional_options_description pos;
+
+	po::options_description desc;
+	desc.add_options()
+		;
+
+	po::variables_map vm;
+	po::store(po::basic_command_line_parser<char>(argc, argv)
+		.options(desc)
+		.positional(pos).run(), vm);
+	po::notify(vm);
+
+	init_for_git_commands();
+
+	if (!fs::exists(Globals::IndexFile))
+		return;
+
+	std::ifstream in_stream;
+	Filesystem::open(Globals::IndexFile, in_stream);
+
+	IndexRecord record;
+	while (in_stream >> record)
+		std::cout << record.path.string() << '\n';
+}
+
+
+void cmd_config(int argc, char* argv[])
+{
+	po::positional_options_description pos;
+	pos.add("name", 1);
+	pos.add("value", 1);
+
+	po::options_description desc;
+	desc.add_options()
+		("name", po::value<std::string>()->required())
+		("value", po::value<std::string>()->required())
+		;
+
+	po::variables_map vm;
+	po::store(po::basic_command_line_parser<char>(argc, argv)
+		.options(desc)
+		.positional(pos).run(), vm);
+	po::notify(vm);
+
+	write_config(Globals::ConfigFile, vm["name"].as<std::string>(), vm["value"].as<std::string>());
 }

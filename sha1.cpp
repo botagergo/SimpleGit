@@ -1,272 +1,275 @@
-/*
-    sha1.cpp - source code of
- 
-    ============
-    SHA-1 in C++
-    ============
- 
-    100% Public Domain.
- 
-    Original C Code
-        -- Steve Reid <steve@edmweb.com>
-    Small changes to fit into bglibs
-        -- Bruce Guenter <bruce@untroubled.org>
-    Translation to simpler C++ Code
-        -- Volker Grabsch <vog@notjusthosting.com>
-*/
- 
-#include "sha1.h"
-#include <sstream>
-#include <iomanip>
-#include <fstream>
- 
-/* Help macros */
-#define SHA1_ROL(value, bits) (((value) << (bits)) | (((value) & 0xffffffff) >> (32 - (bits))))
-#define SHA1_BLK(i) (block[i&15] = SHA1_ROL(block[(i+13)&15] ^ block[(i+8)&15] ^ block[(i+2)&15] ^ block[i&15],1))
- 
-/* (R0+R1), R2, R3, R4 are the different operations used in SHA1 */
-#define SHA1_R0(v,w,x,y,z,i) z += ((w&(x^y))^y)     + block[i]    + 0x5a827999 + SHA1_ROL(v,5); w=SHA1_ROL(w,30);
-#define SHA1_R1(v,w,x,y,z,i) z += ((w&(x^y))^y)     + SHA1_BLK(i) + 0x5a827999 + SHA1_ROL(v,5); w=SHA1_ROL(w,30);
-#define SHA1_R2(v,w,x,y,z,i) z += (w^x^y)           + SHA1_BLK(i) + 0x6ed9eba1 + SHA1_ROL(v,5); w=SHA1_ROL(w,30);
-#define SHA1_R3(v,w,x,y,z,i) z += (((w|x)&y)|(w&x)) + SHA1_BLK(i) + 0x8f1bbcdc + SHA1_ROL(v,5); w=SHA1_ROL(w,30);
-#define SHA1_R4(v,w,x,y,z,i) z += (w^x^y)           + SHA1_BLK(i) + 0xca62c1d6 + SHA1_ROL(v,5); w=SHA1_ROL(w,30);
 
-#define SHA1_LENGTH 40
- 
-SHA1::SHA1()
-{
-    reset();
-}
- 
- 
-void SHA1::update(const std::string &s)
-{
-    std::istringstream is(s);
-    update(is);
-}
- 
- 
-void SHA1::update(std::istream &is)
-{
-    std::string rest_of_buffer;
-    read(is, rest_of_buffer, (int)(BLOCK_BYTES - buffer.size()));
-    buffer += rest_of_buffer;
- 
-    while (is)
-    {
-        uint32 block[BLOCK_INTS];
-        buffer_to_block(buffer, block);
-        transform(block);
-        read(is, buffer, BLOCK_BYTES);
-    }
-}
- 
- 
+/* from valgrind tests */
+
+/* ================ sha1.c ================ */
 /*
- * Add padding and return the message digest.
- */
- 
-std::string SHA1::final()
+SHA-1 in C
+By Steve Reid <steve@edmweb.com>
+100% Public Domain
+Test Vectors (from FIPS PUB 180-1)
+"abc"
+  A9993E36 4706816A BA3E2571 7850C26C 9CD0D89D
+"abcdbcdecdefdefgefghfghighijhijkijkljklmklmnlmnomnopnopq"
+  84983E44 1C3BD26E BAAE4AA1 F95129E5 E54670F1
+A million repetitions of "a"
+  34AA973C D4C4DAA4 F61EEB2B DBAD2731 6534016F
+*/
+
+/* #define LITTLE_ENDIAN * This should be #define'd already, if true. */
+/* #define SHA1HANDSOFF * Copies data before messing with it. */
+
+#define SHA1HANDSOFF
+
+#include <stdio.h>
+#include <string.h>
+#include <sys/types.h>	/* for u_int*_t */
+#if defined(__sun)
+#include "solarisfixes.h"
+#endif
+#include "sha1.h"
+
+#ifndef BYTE_ORDER
+#if (BSD >= 199103)
+# include <machine/endian.h>
+#else
+#if defined(linux) || defined(__linux__)
+# include <endian.h>
+#else
+#define	LITTLE_ENDIAN	1234	/* least-significant byte first (vax, pc) */
+#define	BIG_ENDIAN	4321	/* most-significant byte first (IBM, net) */
+#define	PDP_ENDIAN	3412	/* LSB first in word, MSW first in long (pdp)*/
+
+#if defined(vax) || defined(ns32000) || defined(sun386) || defined(__i386__) || \
+    defined(MIPSEL) || defined(_MIPSEL) || defined(BIT_ZERO_ON_RIGHT) || \
+    defined(__alpha__) || defined(__alpha)
+#define BYTE_ORDER	LITTLE_ENDIAN
+#endif
+
+#if defined(sel) || defined(pyr) || defined(mc68000) || defined(sparc) || \
+    defined(is68k) || defined(tahoe) || defined(ibm032) || defined(ibm370) || \
+    defined(MIPSEB) || defined(_MIPSEB) || defined(_IBMR2) || defined(DGUX) ||\
+    defined(apollo) || defined(__convex__) || defined(_CRAY) || \
+    defined(__hppa) || defined(__hp9000) || \
+    defined(__hp9000s300) || defined(__hp9000s700) || \
+    defined (BIT_ZERO_ON_LEFT) || defined(m68k) || defined(__sparc)
+#define BYTE_ORDER	BIG_ENDIAN
+#endif
+#endif /* linux */
+#endif /* BSD */
+#endif /* BYTE_ORDER */
+
+#if defined(__BYTE_ORDER) && !defined(BYTE_ORDER)
+#if (__BYTE_ORDER == __LITTLE_ENDIAN)
+#define BYTE_ORDER LITTLE_ENDIAN
+#else
+#define BYTE_ORDER BIG_ENDIAN
+#endif
+#endif
+
+#if !defined(BYTE_ORDER) || \
+    (BYTE_ORDER != BIG_ENDIAN && BYTE_ORDER != LITTLE_ENDIAN && \
+    BYTE_ORDER != PDP_ENDIAN)
+	/* you must determine what the correct bit order is for
+	 * your compiler - the next line is an intentional error
+	 * which will force your compiles to bomb until you fix
+	 * the above macros.
+	 */
+#error "Undefined or invalid BYTE_ORDER"
+#endif
+
+#define rol(value, bits) (((value) << (bits)) | ((value) >> (32 - (bits))))
+
+	 /* blk0() and blk() perform the initial expand. */
+	 /* I got the idea of expanding during the round function from SSLeay */
+#if BYTE_ORDER == LITTLE_ENDIAN
+#define blk0(i) (block->l[i] = (rol(block->l[i],24)&0xFF00FF00) \
+    |(rol(block->l[i],8)&0x00FF00FF))
+#elif BYTE_ORDER == BIG_ENDIAN
+#define blk0(i) block->l[i]
+#else
+#error "Endianness not defined!"
+#endif
+#define blk(i) (block->l[i&15] = rol(block->l[(i+13)&15]^block->l[(i+8)&15] \
+    ^block->l[(i+2)&15]^block->l[i&15],1))
+
+/* (R0+R1), R2, R3, R4 are the different operations used in SHA1 */
+#define R0(v,w,x,y,z,i) z+=((w&(x^y))^y)+blk0(i)+0x5A827999+rol(v,5);w=rol(w,30);
+#define R1(v,w,x,y,z,i) z+=((w&(x^y))^y)+blk(i)+0x5A827999+rol(v,5);w=rol(w,30);
+#define R2(v,w,x,y,z,i) z+=(w^x^y)+blk(i)+0x6ED9EBA1+rol(v,5);w=rol(w,30);
+#define R3(v,w,x,y,z,i) z+=(((w|x)&y)|(w&x))+blk(i)+0x8F1BBCDC+rol(v,5);w=rol(w,30);
+#define R4(v,w,x,y,z,i) z+=(w^x^y)+blk(i)+0xCA62C1D6+rol(v,5);w=rol(w,30);
+
+
+/* Hash a single 512-bit block. This is the core of the algorithm. */
+
+void SHA1Transform(u_int32_t state[5], const unsigned char buffer[64])
 {
-    /* Total number of hashed bits */
-    uint64 total_bits = (transforms*BLOCK_BYTES + buffer.size()) * 8;
- 
-    /* Padding */
-    buffer += 0x80;
-    int orig_size = (int)buffer.size();
-    while (buffer.size() < BLOCK_BYTES)
-    {
-        buffer += (char)0x00;
-    }
- 
-    uint32 block[BLOCK_INTS];
-    buffer_to_block(buffer, block);
- 
-    if (orig_size > BLOCK_BYTES - 8)
-    {
-        transform(block);
-        for (int i = 0; i < BLOCK_INTS - 2; i++)
-        {
-            block[i] = 0;
-        }
-    }
- 
-    /* Append total_bits, split this uint64 into two uint32 */
-    block[BLOCK_INTS - 1] = (unsigned long)total_bits;
-    block[BLOCK_INTS - 2] = (total_bits >> 32);
-    transform(block);
- 
-    /* Hex std::string */
-    std::ostringstream result;
-    for (int i = 0; i < DIGEST_INTS; i++)
-    {
-        result << std::hex << std::setfill('0') << std::setw(8);
-        result << (digest[i] & 0xffffffff);
-    }
- 
-    /* Reset for next run */
-    reset();
- 
-    return result.str();
+	u_int32_t a, b, c, d, e;
+	typedef union {
+		unsigned char c[64];
+		u_int32_t l[16];
+	} CHAR64LONG16;
+#ifdef SHA1HANDSOFF
+	CHAR64LONG16 block[1];  /* use array to appear as a pointer */
+	memcpy(block, buffer, 64);
+#else
+	/* The following had better never be used because it causes the
+	 * pointer-to-const buffer to be cast into a pointer to non-const.
+	 * And the result is written through.  I threw a "const" in, hoping
+	 * this will cause a diagnostic.
+	 */
+	CHAR64LONG16* block = (const CHAR64LONG16*)buffer;
+#endif
+	/* Copy context->state[] to working vars */
+	a = state[0];
+	b = state[1];
+	c = state[2];
+	d = state[3];
+	e = state[4];
+	/* 4 rounds of 20 operations each. Loop unrolled. */
+	R0(a, b, c, d, e, 0); R0(e, a, b, c, d, 1); R0(d, e, a, b, c, 2); R0(c, d, e, a, b, 3);
+	R0(b, c, d, e, a, 4); R0(a, b, c, d, e, 5); R0(e, a, b, c, d, 6); R0(d, e, a, b, c, 7);
+	R0(c, d, e, a, b, 8); R0(b, c, d, e, a, 9); R0(a, b, c, d, e, 10); R0(e, a, b, c, d, 11);
+	R0(d, e, a, b, c, 12); R0(c, d, e, a, b, 13); R0(b, c, d, e, a, 14); R0(a, b, c, d, e, 15);
+	R1(e, a, b, c, d, 16); R1(d, e, a, b, c, 17); R1(c, d, e, a, b, 18); R1(b, c, d, e, a, 19);
+	R2(a, b, c, d, e, 20); R2(e, a, b, c, d, 21); R2(d, e, a, b, c, 22); R2(c, d, e, a, b, 23);
+	R2(b, c, d, e, a, 24); R2(a, b, c, d, e, 25); R2(e, a, b, c, d, 26); R2(d, e, a, b, c, 27);
+	R2(c, d, e, a, b, 28); R2(b, c, d, e, a, 29); R2(a, b, c, d, e, 30); R2(e, a, b, c, d, 31);
+	R2(d, e, a, b, c, 32); R2(c, d, e, a, b, 33); R2(b, c, d, e, a, 34); R2(a, b, c, d, e, 35);
+	R2(e, a, b, c, d, 36); R2(d, e, a, b, c, 37); R2(c, d, e, a, b, 38); R2(b, c, d, e, a, 39);
+	R3(a, b, c, d, e, 40); R3(e, a, b, c, d, 41); R3(d, e, a, b, c, 42); R3(c, d, e, a, b, 43);
+	R3(b, c, d, e, a, 44); R3(a, b, c, d, e, 45); R3(e, a, b, c, d, 46); R3(d, e, a, b, c, 47);
+	R3(c, d, e, a, b, 48); R3(b, c, d, e, a, 49); R3(a, b, c, d, e, 50); R3(e, a, b, c, d, 51);
+	R3(d, e, a, b, c, 52); R3(c, d, e, a, b, 53); R3(b, c, d, e, a, 54); R3(a, b, c, d, e, 55);
+	R3(e, a, b, c, d, 56); R3(d, e, a, b, c, 57); R3(c, d, e, a, b, 58); R3(b, c, d, e, a, 59);
+	R4(a, b, c, d, e, 60); R4(e, a, b, c, d, 61); R4(d, e, a, b, c, 62); R4(c, d, e, a, b, 63);
+	R4(b, c, d, e, a, 64); R4(a, b, c, d, e, 65); R4(e, a, b, c, d, 66); R4(d, e, a, b, c, 67);
+	R4(c, d, e, a, b, 68); R4(b, c, d, e, a, 69); R4(a, b, c, d, e, 70); R4(e, a, b, c, d, 71);
+	R4(d, e, a, b, c, 72); R4(c, d, e, a, b, 73); R4(b, c, d, e, a, 74); R4(a, b, c, d, e, 75);
+	R4(e, a, b, c, d, 76); R4(d, e, a, b, c, 77); R4(c, d, e, a, b, 78); R4(b, c, d, e, a, 79);
+	/* Add the working vars back into context.state[] */
+	state[0] += a;
+	state[1] += b;
+	state[2] += c;
+	state[3] += d;
+	state[4] += e;
+	/* Wipe variables */
+	a = b = c = d = e = 0;
+#ifdef SHA1HANDSOFF
+	memset(block, '\0', sizeof(block));
+#endif
 }
- 
- 
-std::string SHA1::from_file(const std::string &filename)
+
+
+/* SHA1Init - Initialize new context */
+
+void SHA1Init(SHA1_CTX* context)
 {
-    std::ifstream stream(filename.c_str(), std::ios::binary);
-    SHA1 checksum;
-    checksum.update(stream);
-    return checksum.final();
+	/* SHA1 initialization constants */
+	context->state[0] = 0x67452301;
+	context->state[1] = 0xEFCDAB89;
+	context->state[2] = 0x98BADCFE;
+	context->state[3] = 0x10325476;
+	context->state[4] = 0xC3D2E1F0;
+	context->count[0] = context->count[1] = 0;
 }
- 
- 
-void SHA1::reset()
+
+
+/* Run your data through this. */
+
+void SHA1Update(SHA1_CTX* context, const unsigned char* data, u_int32_t len)
 {
-    /* SHA1 initialization constants */
-    digest[0] = 0x67452301;
-    digest[1] = 0xefcdab89;
-    digest[2] = 0x98badcfe;
-    digest[3] = 0x10325476;
-    digest[4] = 0xc3d2e1f0;
- 
-    /* Reset counters */
-    transforms = 0;
-    buffer = "";
+	u_int32_t i;
+	u_int32_t j;
+
+	j = context->count[0];
+	if ((context->count[0] += len << 3) < j)
+		context->count[1]++;
+	context->count[1] += (len >> 29);
+	j = (j >> 3) & 63;
+	if ((j + len) > 63) {
+		memcpy(&context->buffer[j], data, (i = 64 - j));
+		SHA1Transform(context->state, context->buffer);
+		for (; i + 63 < len; i += 64) {
+			SHA1Transform(context->state, &data[i]);
+		}
+		j = 0;
+	}
+	else i = 0;
+	memcpy(&context->buffer[j], &data[i], len - i);
 }
- 
- 
-/*
- * Hash a single 512-bit block. This is the core of the algorithm.
- */
- 
-void SHA1::transform(uint32 block[BLOCK_BYTES])
+
+
+/* Add padding and return the message digest. */
+
+void SHA1Final(unsigned char digest[20], SHA1_CTX* context)
 {
-    /* Copy digest[] to working vars */
-    uint32 a = digest[0];
-    uint32 b = digest[1];
-    uint32 c = digest[2];
-    uint32 d = digest[3];
-    uint32 e = digest[4];
- 
- 
-    /* 4 rounds of 20 operations each. Loop unrolled. */
-    SHA1_R0(a,b,c,d,e, 0);
-    SHA1_R0(e,a,b,c,d, 1);
-    SHA1_R0(d,e,a,b,c, 2);
-    SHA1_R0(c,d,e,a,b, 3);
-    SHA1_R0(b,c,d,e,a, 4);
-    SHA1_R0(a,b,c,d,e, 5);
-    SHA1_R0(e,a,b,c,d, 6);
-    SHA1_R0(d,e,a,b,c, 7);
-    SHA1_R0(c,d,e,a,b, 8);
-    SHA1_R0(b,c,d,e,a, 9);
-    SHA1_R0(a,b,c,d,e,10);
-    SHA1_R0(e,a,b,c,d,11);
-    SHA1_R0(d,e,a,b,c,12);
-    SHA1_R0(c,d,e,a,b,13);
-    SHA1_R0(b,c,d,e,a,14);
-    SHA1_R0(a,b,c,d,e,15);
-    SHA1_R1(e,a,b,c,d,16);
-    SHA1_R1(d,e,a,b,c,17);
-    SHA1_R1(c,d,e,a,b,18);
-    SHA1_R1(b,c,d,e,a,19);
-    SHA1_R2(a,b,c,d,e,20);
-    SHA1_R2(e,a,b,c,d,21);
-    SHA1_R2(d,e,a,b,c,22);
-    SHA1_R2(c,d,e,a,b,23);
-    SHA1_R2(b,c,d,e,a,24);
-    SHA1_R2(a,b,c,d,e,25);
-    SHA1_R2(e,a,b,c,d,26);
-    SHA1_R2(d,e,a,b,c,27);
-    SHA1_R2(c,d,e,a,b,28);
-    SHA1_R2(b,c,d,e,a,29);
-    SHA1_R2(a,b,c,d,e,30);
-    SHA1_R2(e,a,b,c,d,31);
-    SHA1_R2(d,e,a,b,c,32);
-    SHA1_R2(c,d,e,a,b,33);
-    SHA1_R2(b,c,d,e,a,34);
-    SHA1_R2(a,b,c,d,e,35);
-    SHA1_R2(e,a,b,c,d,36);
-    SHA1_R2(d,e,a,b,c,37);
-    SHA1_R2(c,d,e,a,b,38);
-    SHA1_R2(b,c,d,e,a,39);
-    SHA1_R3(a,b,c,d,e,40);
-    SHA1_R3(e,a,b,c,d,41);
-    SHA1_R3(d,e,a,b,c,42);
-    SHA1_R3(c,d,e,a,b,43);
-    SHA1_R3(b,c,d,e,a,44);
-    SHA1_R3(a,b,c,d,e,45);
-    SHA1_R3(e,a,b,c,d,46);
-    SHA1_R3(d,e,a,b,c,47);
-    SHA1_R3(c,d,e,a,b,48);
-    SHA1_R3(b,c,d,e,a,49);
-    SHA1_R3(a,b,c,d,e,50);
-    SHA1_R3(e,a,b,c,d,51);
-    SHA1_R3(d,e,a,b,c,52);
-    SHA1_R3(c,d,e,a,b,53);
-    SHA1_R3(b,c,d,e,a,54);
-    SHA1_R3(a,b,c,d,e,55);
-    SHA1_R3(e,a,b,c,d,56);
-    SHA1_R3(d,e,a,b,c,57);
-    SHA1_R3(c,d,e,a,b,58);
-    SHA1_R3(b,c,d,e,a,59);
-    SHA1_R4(a,b,c,d,e,60);
-    SHA1_R4(e,a,b,c,d,61);
-    SHA1_R4(d,e,a,b,c,62);
-    SHA1_R4(c,d,e,a,b,63);
-    SHA1_R4(b,c,d,e,a,64);
-    SHA1_R4(a,b,c,d,e,65);
-    SHA1_R4(e,a,b,c,d,66);
-    SHA1_R4(d,e,a,b,c,67);
-    SHA1_R4(c,d,e,a,b,68);
-    SHA1_R4(b,c,d,e,a,69);
-    SHA1_R4(a,b,c,d,e,70);
-    SHA1_R4(e,a,b,c,d,71);
-    SHA1_R4(d,e,a,b,c,72);
-    SHA1_R4(c,d,e,a,b,73);
-    SHA1_R4(b,c,d,e,a,74);
-    SHA1_R4(a,b,c,d,e,75);
-    SHA1_R4(e,a,b,c,d,76);
-    SHA1_R4(d,e,a,b,c,77);
-    SHA1_R4(c,d,e,a,b,78);
-    SHA1_R4(b,c,d,e,a,79);
- 
-    /* Add the working vars back into digest[] */
-    digest[0] += a;
-    digest[1] += b;
-    digest[2] += c;
-    digest[3] += d;
-    digest[4] += e;
- 
-    /* Count the number of transformations */
-    transforms++;
+	unsigned i;
+	unsigned char finalcount[8];
+	unsigned char c;
+
+#if 0	/* untested "improvement" by DHR */
+	/* Convert context->count to a sequence of bytes
+	 * in finalcount.  Second element first, but
+	 * big-endian order within element.
+	 * But we do it all backwards.
+	 */
+	unsigned char* fcp = &finalcount[8];
+
+	for (i = 0; i < 2; i++)
+	{
+		u_int32_t t = context->count[i];
+		int j;
+
+		for (j = 0; j < 4; t >>= 8, j++)
+			* --fcp = (unsigned char)t
+	}
+#else
+	for (i = 0; i < 8; i++) {
+		finalcount[i] = (unsigned char)((context->count[(i >= 4 ? 0 : 1)]
+			>> ((3 - (i & 3)) * 8)) & 255);  /* Endian independent */
+	}
+#endif
+	c = 0200;
+	SHA1Update(context, &c, 1);
+	while ((context->count[0] & 504) != 448) {
+		c = 0000;
+		SHA1Update(context, &c, 1);
+	}
+	SHA1Update(context, finalcount, 8);  /* Should cause a SHA1Transform() */
+	for (i = 0; i < 20; i++) {
+		digest[i] = (unsigned char)
+			((context->state[i >> 2] >> ((3 - (i & 3)) * 8)) & 255);
+	}
+	/* Wipe variables */
+	memset(context, '\0', sizeof(*context));
+	memset(&finalcount, '\0', sizeof(finalcount));
 }
- 
- 
-void SHA1::buffer_to_block(const std::string &buffer, uint32 block[BLOCK_BYTES])
+/* ================ end of sha1.c ================ */
+
+#if 0
+#define BUFSIZE 4096
+
+int
+main(int argc, char** argv)
 {
-    /* Convert the std::string (byte buffer) to a uint32 array (MSB) */
-    for (unsigned int i = 0; i < BLOCK_INTS; i++)
-    {
-        block[i] = (buffer[4*i+3] & 0xff)
-                   | (buffer[4*i+2] & 0xff)<<8
-                   | (buffer[4*i+1] & 0xff)<<16
-                   | (buffer[4*i+0] & 0xff)<<24;
-    }
+	SHA1_CTX ctx;
+	unsigned char hash[20], buf[BUFSIZE];
+	int i;
+
+	for (i = 0; i < BUFSIZE; i++)
+		buf[i] = i;
+
+	SHA1Init(&ctx);
+	for (i = 0; i < 1000; i++)
+		SHA1Update(&ctx, buf, BUFSIZE);
+	SHA1Final(hash, &ctx);
+
+	printf("SHA1=");
+	for (i = 0; i < 20; i++)
+		printf("%02x", hash[i]);
+	printf("\n");
+	return 0;
 }
- 
- 
-void SHA1::read(std::istream &is, std::string &s, int max)
-{
-    char sbuf[10000]; // todo
-    is.read(sbuf, max);
-    s.assign(sbuf, is.gcount());
-}
- 
- 
-std::string sha1(const std::string &string)
-{
-    SHA1 checksum;
-    checksum.update(string);
-    return checksum.final();
-}
+
+#endif

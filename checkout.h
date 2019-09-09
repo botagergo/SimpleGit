@@ -1,7 +1,5 @@
 #pragma once
 
-#include <string>
-
 // clears all the files in the repository except the git directory
 void clear_working_directory();
 

@@ -1,8 +1,9 @@
 #include <fstream>
-#include <filesystem>
+#include <sstream>
 
 #include "blob.h"
 #include "commit.h"
+#include "error.h"
 #include "exception.h"
 #include "filesystem.h"
 #include "helper.h"
@@ -12,66 +13,163 @@
 
 namespace fs = boost::filesystem;
 
-bool match_object_id(const std::string& prefix, const std::string& object_id)
+ObjectData open_object(const char* object_file, bool header_only)
 {
-	return std::equal(prefix.begin(), prefix.end(), object_id.begin());
-}
+	ObjectData data;
+	uLongf destLen;
+	Bytef header_buf[ObjectHeader::MaxHeaderSize];
 
-std::string expand_object_id_prefix(const std::string& object_id_prefix)
-{
-	const std::string dir_prefix = object_id_prefix.substr(0, Globals::IdPrefixLength);
-	const fs::path obj_dir = Filesystem::get_object_dir(dir_prefix);
+	HANDLE file = CreateFileA(object_file, GENERIC_READ, 0, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, 0);
+	if (file == INVALID_HANDLE_VALUE)
+		throw Exception(boost::format("cannot open file: %1%") % object_file);
 
-	for (const fs::path& object : fs::directory_iterator(obj_dir))
+	HANDLE map = CreateFileMappingA(file, NULL, PAGE_READONLY, 0, 0, NULL);
+	if (map == NULL)
+		throw Exception("CreateFileMapping");
+
+	Bytef* ptr = (Bytef*)MapViewOfFile(map, FILE_MAP_READ, 0, 0, 0);
+	if (ptr == NULL)
+		throw Exception("MapViewOfFile");
+
+	LARGE_INTEGER l_fsize;
+	GetFileSizeEx(file, (PLARGE_INTEGER)& l_fsize);
+	uint64_t fsize = l_fsize.QuadPart;
+
+	z_stream stream;
+
+	memset(&stream, Z_NULL, sizeof(z_stream));
+	stream.avail_in = (uInt)fsize;
+	stream.avail_out = ObjectHeader::MaxHeaderSize;
+	stream.next_in = ptr;
+	stream.next_out = header_buf;
+	inflateInit(&stream);
+	inflate(&stream, Z_NO_FLUSH);
+
+	int n = sscanf((char*)header_buf, "%s %lld\0", data.kind, &data.len);
+	assert(n == 2);
+
+	if (header_only)
 	{
-		if (match_object_id(object_id_prefix.substr(Globals::IdPrefixLength), object.filename().string()))
-			return dir_prefix + object.filename().string();
+		data.buf = nullptr;
+		goto ret;
 	}
 
-	throw InvalidObjectIdPrefix(object_id_prefix);
+	data.buf = new char[ObjectHeader::MaxHeaderSize + data.len + 1];
+	memset(data.buf, 0, ObjectHeader::MaxHeaderSize + data.len + 1);
+	destLen = (uInt)(ObjectHeader::MaxHeaderSize + data.len);
+	uncompress((Bytef*)data.buf, &destLen, ptr, (uLong)fsize);
+	data.buf[destLen] = 0;
+
+ret:
+	UnmapViewOfFile(ptr);
+	CloseHandle(file);
+
+	return data;
 }
 
-std::string open_object(std::ifstream& in_stream, const std::string& object_id)
+void write_object(const char* object_file, const char* buf, uint64_t len)
 {
-	Filesystem::open(Filesystem::get_object_path(object_id), in_stream, std::ios_base::in);
+	HANDLE file = CreateFileA(object_file, GENERIC_READ | GENERIC_WRITE, 0, NULL, CREATE_ALWAYS, 0, 0);
+	if (file == INVALID_HANDLE_VALUE)
+		throw Exception(boost::format("cannot create file: %1%") % object_file);
 
-	std::string object_type;
-	in_stream >> object_type >> std::ws;
+	HANDLE map = CreateFileMappingA(file, NULL, PAGE_READWRITE, len >> (sizeof(DWORD) * 8), len & ((DWORD)-1), NULL);
+	if (map == NULL)
+		throw Exception("CreateFileMapping");
 
-	return object_type;
+	Bytef* ptr = (Bytef*)MapViewOfFile(map, FILE_MAP_WRITE, 0, 0, len & ((DWORD)-1));
+	if (ptr == NULL)
+		throw Exception("MapViewOfFile");
+
+	uLongf ulen = len;
+	compress(ptr, &ulen, (Bytef*)buf, len);
+	UnmapViewOfFile(ptr);
+	CloseHandle(file);
 }
 
-std::string get_object_type(const std::string& object_id)
+std::string ObjectWriter::save()
 {
-	Object object(object_id);
-	ObjectHeader header;
-	object.in_stream() >> header;
-	return header.kind;
+	if (_saved)
+		return _id;
+
+	std::stringstream header;
+	header << _object_kind << ' ' << _buf.content_length() << '\0';
+
+	char* buf_start = _buf.str() + Globals::MaxObjectHeaderSize - header.str().size();
+	strcpy(buf_start, header.str().c_str());
+
+	_id = get_hash(buf_start, _buf.content_length() + header.str().size());
+
+	// we check if the object already exists, it will throw exception when we try to overwrite otherwise
+	if (Filesystem::object_exists(_id))
+		return _id;
+
+	Filesystem::create_directory(Filesystem::get_object_dir(_id));
+
+	std::string object_file = Filesystem::get_object_path(_id).string();
+
+	write_object(object_file.c_str(), buf_start, _buf.content_length() + header.str().size());
+
+	SetFileAttributesA(object_file.c_str(), FILE_ATTRIBUTE_READONLY);
+	_saved = true;
+	return _id;
 }
 
-void pretty_print_object(std::ostream& out_stream, const std::string& object_id)
+std::string ObjectWriter::id() const
 {
-	Object object(object_id);
-	ObjectStream stream = object.in_stream();
-	ObjectHeader header;
-	stream >> header;
-
-	const std::string object_type = header.kind;
-	if (object_type == "blob")
-		out_stream << Filesystem::read_content(stream);
-	else if (object_type == "tree")
-		pretty_print_tree(out_stream, stream);
-	else if (object_type == "commit")
-		pretty_print_commit(out_stream, stream);
+	return _id;
 }
 
-ObjectStream Object::in_stream()
+std::string Object::kind() const
 {
-	return ObjectStream(_path);;
+	ObjectData data = open_object(_path.string().c_str(), true);
+	return data.kind;
 }
 
-ObjectStream & ObjectStream::operator>>(ObjectHeader & header)
+uint64_t Object::size() const
 {
-	header = _header;
-	return *this;
+	ObjectData data = open_object(_path.string().c_str(), true);
+	return data.len;
+}
+
+std::unique_ptr<ObjectReader> Object::get_reader() const
+{
+	ObjectData data = open_object(_path.string().c_str(), false);
+	if (strcmp(data.kind, "blob") == 0)
+		return std::unique_ptr<ObjectReader>((ObjectReader*)(new BlobReader(data)));
+	else if (strcmp(data.kind, "tree") == 0)
+		return std::unique_ptr<ObjectReader>((ObjectReader*)(new TreeReader(data)));
+	else if (strcmp(data.kind, "commit") == 0)
+		return std::unique_ptr<ObjectReader>((ObjectReader*)(new CommitReader(data)));
+	else
+		throw Exception(boost::format("invalid object kind: %1%") % data.kind);
+}
+
+std::unique_ptr<BlobReader> Object::get_blob_reader() const
+{
+	ObjectData data = open_object(_path.string().c_str(), false);
+	if (strcmp(data.kind, "blob"))
+		throw Exception(boost::format("object not a blob: ") % _id);
+	return std::unique_ptr<BlobReader>((BlobReader*)(new BlobReader(data)));
+}
+
+std::unique_ptr<TreeReader> Object::get_tree_reader() const
+{
+	ObjectData data = open_object(_path.string().c_str(), false);
+	if (strcmp(data.kind, "tree"))
+		throw Exception(boost::format("object not a tree: ") % _id);
+	return std::unique_ptr<TreeReader>((TreeReader*)(new TreeReader(data)));
+}
+
+std::unique_ptr<CommitReader> Object::get_commit_reader() const
+{
+	ObjectData data = open_object(_path.string().c_str(), false);
+	if (strcmp(data.kind, "commit"))
+		throw Exception(boost::format("object not a commit: ") % _id);
+	return std::unique_ptr<CommitReader>((CommitReader*)(new CommitReader(data)));
+}
+
+std::ostream& ObjectReader::read_content(std::ostream& out_stream)
+{
+	return out_stream << _curr_pos;
 }

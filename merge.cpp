@@ -4,7 +4,6 @@
 #include "filesystem.h"
 #include "index.h"
 #include "merge.h"
-#include "object_file_writer.h"
 #include "tree.h"
 
 void merge_tree_into_index(const fs::path& index_file, const std::string& tree_id)
@@ -47,7 +46,7 @@ void merge_tree_into_index(const fs::path& index_file, const std::string& tree_i
 		else /*if (tree1_record.kind == "tree")*/
 		{
 			std::string new_tree_id = merge_tree(index_record.id, tree_record.id);
-			out_stream << TreeRecord("tree", new_tree_id, index_record.path) << '\n';
+			out_stream << TreeRecord("tree", index_record.mode, new_tree_id, index_record.path) << '\n';
 		}
 	}
 
@@ -71,7 +70,7 @@ void merge_tree_into_index(const fs::path& index_file, const std::string& tree_i
 
 std::string merge_tree(const std::string& tree1_id, const std::string& tree2_id)
 {
-	ObjectFileWriter new_tree;
+	ObjectWriter new_tree("tree");
 	std::ifstream tree1_in, tree2_in;
 
 	if (Filesystem::open_object(tree1_id, tree1_in) != "tree")
@@ -107,7 +106,7 @@ std::string merge_tree(const std::string& tree1_id, const std::string& tree2_id)
 		else /*if (tree1_record.kind == "tree")*/
 		{
 			std::string new_tree_id = merge_tree(tree1_record.id, tree2_record.id);
-			new_tree << TreeRecord("tree", new_tree_id, tree1_record.path) << '\n';
+			new_tree << TreeRecord("tree", tree1_record.mode, new_tree_id, tree1_record.path) << '\n';
 		}
 	}
 

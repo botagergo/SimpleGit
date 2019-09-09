@@ -17,12 +17,12 @@
 
 std::ostream& operator<<(std::ostream& ostream, const IndexRecord& record)
 {
-	return ostream << record.id << ' ' << record.mtime << ' ' << record.path.string();
+	return ostream << record.id << ' ' << record.mtime << ' ' << record.mode << ' ' << record.path.string();
 }
 
 std::istream& operator>>(std::istream& istream, IndexRecord& record)
 {
-	istream >> record.id >> record.mtime >> std::ws;
+	istream >> record.id >> record.mtime >> record.mode >> std::ws;
 	std::string line;
 	auto &ret = std::getline(istream, line);
 	record.path = line;
@@ -35,6 +35,7 @@ IndexRecord create_index_record(const fs::path& file)
 	record.id = write_blob_from_file(file);
 	record.path = file;
 	record.mtime = Filesystem::get_stat(file).st_mtime;
+	record.mode = "100644";
 	return record;
 }
 
@@ -44,7 +45,7 @@ bool process_index_record(const IndexRecord& record, const fs::path& file, std::
 
 	if (record.path == file)
 	{
-		if (flags & UPDATE_INDEX_MODIFY && fs::exists(file))
+		if ((flags & UPDATE_INDEX_MODIFY) && fs::exists(file))
 		{
 			// we check the stat information to determine whether the file is newer than that in the index
 			struct stat s = Filesystem::get_stat(file);
@@ -53,14 +54,14 @@ bool process_index_record(const IndexRecord& record, const fs::path& file, std::
 			else
 				output << record << '\n';
 		}
-		else if (flags & UPDATE_INDEX_REMOVE_IF_DELETED && !fs::exists(file))
-			;
+		else if (!(flags & UPDATE_INDEX_MODIFY) && fs::exists(file))
+			throw Exception(boost::format("file is already in the index: %1%") % file);
+		else if (!(flags & UPDATE_INDEX_REMOVE_IF_DELETED) && !fs::exists(file))
+			throw Exception(boost::format("file doesn't exist: %1%") % file);
 		else if ((flags & UPDATE_INDEX_FORCE_REMOVE) != UPDATE_INDEX_FORCE_REMOVE && fs::exists(record.path))
-			throw IndexRemoveFileExists(file);
-		else if (fs::exists(file))
-			throw FileExistsException(file);
-		else
-			throw FileAlreadyInIndexException(file);
+			throw Exception(boost::format("cannot delete from index, file exists: %1%") % file);
+		// else just delete the file
+
 		updated = true;
 	}
 	else if (file < record.path)
@@ -68,7 +69,7 @@ bool process_index_record(const IndexRecord& record, const fs::path& file, std::
 		if (flags & UPDATE_INDEX_ADD)
 			output << create_index_record(file) << '\n';
 		else
-			throw FileNotInIndexException(file);
+			throw Exception(boost::format("file is not in the index: %1%") % file);
 	}
 
 	return updated;
@@ -76,36 +77,40 @@ bool process_index_record(const IndexRecord& record, const fs::path& file, std::
 
 void update_index(const std::vector<fs::path>& files, int flags)
 {
+#ifdef _DEBUG
 	// check for invalid flag combination
-	if ((flags & UPDATE_INDEX_REMOVE) &&
-		(flags & (UPDATE_INDEX_ADD | UPDATE_INDEX_MODIFY)))
+	if ((flags & UPDATE_INDEX_REMOVE) && (flags & UPDATE_INDEX_MODIFY))
 		assert(false);
+#endif
 
 	assert(files.size() > 0);
 
 	Filesystem::make_sure_file_exists(Globals::IndexFile);
 
-	std::ifstream stream;
-	Filesystem::open(Globals::IndexFile, stream);
+	std::ifstream in_stream;
+	Filesystem::open(Globals::IndexFile, in_stream);
 
 	std::stringstream output;
 	IndexRecord record;
 
 	auto curr_file = files.begin();
 
-	while (!stream.eof() && curr_file != files.end())
+	while (!in_stream.eof() && curr_file != files.end())
 	{
 		// we read the index file until we reach eof or find a matching file
-		while (!(stream >> record).eof() && record.path < *curr_file)
+		while (!(in_stream >> record).eof() && record.path < *curr_file)
 			output << record << '\n';
 
-		if (stream.eof())
+		if (in_stream.eof())
 			break;
 
 		bool updated = false;
 
+		// we process the files that are lexicographically ahead of the current record
 		while (curr_file != files.end() && record.path >= *curr_file)
 		{
+			// process_index_record returns true, if the current file matches the current index record,
+			// and the record was modified, in which case we don't output it again
 			updated |= process_index_record(record, *curr_file, (std::ostream&)output, flags);
 			curr_file++;
 		}
@@ -115,7 +120,7 @@ void update_index(const std::vector<fs::path>& files, int flags)
 	}
 
 	// finish reading the entire file
-	while (!(stream >> record).eof())
+	while (!(in_stream >> record).eof())
 		output << record << '\n';
 
 	if (curr_file != files.end())
@@ -132,7 +137,7 @@ void update_index(const std::vector<fs::path>& files, int flags)
 			throw FileNotInIndexException(*curr_file);
 	}
 
-	stream.close();
+	in_stream.close();
 	Filesystem::write_content(Globals::IndexFile, (std::istream&)output, Filesystem::FILE_FLAG_OVERWRITE);
 }
 

@@ -2,6 +2,7 @@
 
 #include <fstream>
 
+#include "defs.h"
 #include "index.h"
 #include "tree.h"
 
