@@ -52,6 +52,7 @@ protected:
 };
 
 // creates a new tree from the current index
+// ignore_missing	-	adds blob to the tree even if it doesn't exist
 std::string write_tree(const fs::path& prefix = "", bool ignore_missing = false);
 
 // creates a new tree from the given tree records

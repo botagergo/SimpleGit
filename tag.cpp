@@ -21,12 +21,7 @@ std::string read_tag(const std::string& name)
 void write_tag(const std::string &tag_name, const std::string& commit, int flags = 0)
 {
 	fs::path path = Globals::TagDir / tag_name;
-	try {
-		Filesystem::write_content(path, commit, flags | Filesystem::FILE_FLAG_CREATE_DIRECTORIES);
-	}
-	catch (const FileExistsException&) {
-		throw TagExistsException(tag_name);
-	}
+	Filesystem::write_content(path, commit, flags | Filesystem::FILE_FLAG_CREATE_DIRECTORIES);
 }
 
 void delete_tag(const std::string& tag_name)

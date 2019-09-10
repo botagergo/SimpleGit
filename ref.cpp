@@ -67,9 +67,8 @@ std::string resolve_tree(const std::string& ref)
 	if (ref.size() >= 4)
 	{
 		std::string object_id = expand_object_id_prefix(ref);
-
-		std::istringstream in_stream;
 		Object object(object_id);
+
 		std::string object_kind = object.kind();
 
 		if (object_kind == "commit")

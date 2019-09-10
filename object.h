@@ -151,6 +151,7 @@ public:
 	std::unique_ptr<CommitReader>	get_commit_reader() const;
 
 private:
-	std::string _id;
-	fs::path	_path;
+	std::string			_id;
+	fs::path			_path;
+	mutable ObjectData	_data;
 };

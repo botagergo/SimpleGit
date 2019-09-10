@@ -122,14 +122,18 @@ std::string ObjectWriter::id() const
 
 std::string Object::kind() const
 {
-	ObjectData data = open_object(_path.string().c_str(), true);
-	return data.kind;
+	if (!_data.buf)
+		_data = open_object(_path.string().c_str(), true);
+
+	return _data.kind;
 }
 
 uint64_t Object::size() const
 {
-	ObjectData data = open_object(_path.string().c_str(), true);
-	return data.len;
+	if (!_data.buf)
+		_data = open_object(_path.string().c_str(), true);
+
+	return _data.len;
 }
 
 std::unique_ptr<ObjectReader> Object::get_reader() const

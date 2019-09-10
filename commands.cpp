@@ -74,6 +74,28 @@ void init_for_git_commands()
 
 void cmd_init(int argc, char* argv[])
 {
+	po::positional_options_description pos;
+	pos
+		;
+
+	po::options_description desc;
+	desc.add_options()
+	("help,h", po::value<bool>()->implicit_value(true)->zero_tokens(), "prints command usage")
+		;
+
+	po::variables_map vm;
+
+	po::store(po::command_line_parser(argc, argv)
+		.options(desc)
+		.positional(pos).run(), vm);
+	po::notify(vm);
+
+	if (vm.count("help"))
+	{
+		std::cout << desc << std::endl;
+		return;
+	}
+
 	if (!fs::exists(Globals::SimpleGitDir))
 	{
 		init_filesystem();
@@ -91,7 +113,8 @@ void cmd_add(int argc, char* argv[])
 
 	po::options_description desc;
 	desc.add_options()
-		("files", po::value<std::vector<fs::path>>(), "files to add")
+		("help,h", po::value<bool>()->implicit_value(true)->zero_tokens(), "prints command usage")
+		("files", po::value<std::vector<fs::path>>(), "files to update in the index")
 		;
 
 	po::variables_map vm;
@@ -100,6 +123,12 @@ void cmd_add(int argc, char* argv[])
 		.options(desc)
 		.positional(pos).run(), vm);
 	po::notify(vm);
+
+	if (vm.count("help"))
+	{
+		std::cout << desc << std::endl;
+		return;
+	}
 
 	init_for_git_commands();
 
@@ -122,6 +151,7 @@ void cmd_update_index(int argc, char* argv[])
 
 	po::options_description desc;
 	desc.add_options()
+		("help,h", po::value<bool>()->implicit_value(true)->zero_tokens(), "prints command usage")
 		("add", po::value<bool>()->implicit_value(true)->zero_tokens(), "add files even if not in index")
 		("remove", po::value<bool>()->implicit_value(true)->zero_tokens(), "remove files if missing")
 		("force-remove", po::value<bool>()->implicit_value(true)->zero_tokens(), "remove files even if not missing")
@@ -132,6 +162,12 @@ void cmd_update_index(int argc, char* argv[])
 		.options(desc)
 		.positional(pos).run(), vm);
 	po::notify(vm);
+
+	if (vm.count("help"))
+	{
+		std::cout << desc << std::endl;
+		return;
+	}
 
 	init_for_git_commands();
 
@@ -153,6 +189,7 @@ void cmd_commit(int argc, char* argv[])
 
 	po::options_description desc;
 	desc.add_options()
+		("help,h", po::value<bool>()->implicit_value(true)->zero_tokens(), "prints command usage")
 		("message,m", po::value<std::string>()->required(), "commit message")
 		;
 
@@ -161,6 +198,12 @@ void cmd_commit(int argc, char* argv[])
 		.options(desc)
 		.positional(pos).run(), vm);
 	po::notify(vm);
+
+	if (vm.count("help"))
+	{
+		std::cout << desc << std::endl;
+		return;
+	}
 
 	init_for_git_commands();
 	if (Globals::Config.find("user.name") == Globals::Config.end())
@@ -215,9 +258,10 @@ void cmd_tag(int argc, char* argv[])
 	/////////////////////////////////////////////////////////////////////////
 	po::options_description root_desc;
 	root_desc.add_options()
-		("delete,d", po::value<bool>()->implicit_value(true)->zero_tokens())
-		("list,", po::value<bool>()->implicit_value(true)->zero_tokens())
-		("force,f", po::value<bool>()->implicit_value(true)->zero_tokens())
+		("help,h", po::value<bool>()->implicit_value(true)->zero_tokens(), "prints command usage")
+		("delete,d", po::value<bool>()->implicit_value(true)->zero_tokens(), "delete tag")
+		("list,", po::value<bool>()->implicit_value(true)->zero_tokens(), "list tags")
+		("force,f", po::value<bool>()->implicit_value(true)->zero_tokens(), "overwrites tag if exists")
 		;
 
 	po::variables_map root_vm;
@@ -229,8 +273,6 @@ void cmd_tag(int argc, char* argv[])
 		root_vm.insert(std::make_pair("delete", po::variable_value(true, true)));
 		root_vm.insert(std::make_pair("force", po::variable_value(true, true)));
 	}
-
-	po::notify(root_vm);
 
 	po::variables_map vm;
 	po::positional_options_description pos;
@@ -269,7 +311,14 @@ void cmd_tag(int argc, char* argv[])
 	po::command_line_parser actual_parser = po::command_line_parser(argc, argv).options(desc).positional(pos);
 	po::store(actual_parser.run(), vm);
 	vm.insert(root_vm.begin(), root_vm.end());
+	po::notify(root_vm);
 	/////////////////////////////////////////////////////////////////////////
+
+	if (vm.count("help"))
+	{
+		std::cout << desc << std::endl;
+		return;
+	}
 
 	init_for_git_commands();
 
@@ -297,7 +346,8 @@ void cmd_read_tree(int argc, char* argv[])
 
 	po::options_description desc;
 	desc.add_options()
-		(",m", po::value<bool>()->implicit_value(true)->zero_tokens())
+		("help,h", po::value<bool>()->implicit_value(true)->zero_tokens(), "prints command usage")
+		(",m", po::value<bool>()->implicit_value(true)->zero_tokens(), "perform merge")
 		("tree-ish", po::wvalue<std::vector<std::string>>(), "list of tree objects")
 		;
 
@@ -306,6 +356,12 @@ void cmd_read_tree(int argc, char* argv[])
 		.options(desc)
 		.positional(pos).run(), vm);
 	po::notify(vm);
+
+	if (vm.count("help"))
+	{
+		std::cout << desc << std::endl;
+		return;
+	}
 
 	init_for_git_commands();
 
@@ -334,7 +390,8 @@ void cmd_write_tree(int argc, char* argv[])
 
 	po::options_description desc;
 	desc.add_options()
-		("missing-ok", po::value<bool>()->implicit_value(true))
+		("help,h", po::value<bool>()->implicit_value(true)->zero_tokens(), "prints command usage")
+		("missing-ok", po::value<bool>()->implicit_value(true), "adds blob to the tree even if it doesn't exist")
 		("prefix", po::value<fs::path>())
 		;
 
@@ -343,6 +400,12 @@ void cmd_write_tree(int argc, char* argv[])
 		.options(desc)
 		.positional(pos).run(), vm);
 	po::notify(vm);
+
+	if (vm.count("help"))
+	{
+		std::cout << desc << std::endl;
+		return;
+	}
 
 	init_for_git_commands();
 
@@ -359,6 +422,7 @@ void cmd_branch(int argc, char* argv[])
 	/////////////////////////////////////////////////////////////////////////
 	po::options_description root_desc;
 	root_desc.add_options()
+		("help,h", po::value<bool>()->implicit_value(true)->zero_tokens(), "prints command usage")
 		("delete,d", po::value<bool>()->implicit_value(true)->zero_tokens())
 		("move,m", po::value<bool>()->implicit_value(true)->zero_tokens())
 		("copy,c", po::value<bool>()->implicit_value(true)->zero_tokens())
@@ -388,8 +452,6 @@ void cmd_branch(int argc, char* argv[])
 		root_vm.insert(std::make_pair("copy", po::variable_value(true, true)));
 		root_vm.insert(std::make_pair("force", po::variable_value(true, true)));
 	}
-
-	po::notify(root_vm);
 
 	po::variables_map vm;
 	po::positional_options_description pos;
@@ -451,7 +513,14 @@ void cmd_branch(int argc, char* argv[])
 	po::command_line_parser actual_parser = po::command_line_parser(argc, argv).options(desc).positional(pos);
 	po::store(actual_parser.run(), vm);
 	vm.insert(root_vm.begin(), root_vm.end());
+	po::notify(root_vm);
 	/////////////////////////////////////////////////////////////////////////
+
+	if (vm.count("help"))
+	{
+		std::cout << desc << std::endl;
+		return;
+	}
 
 	init_for_git_commands();
 
@@ -493,6 +562,7 @@ void cmd_checkout(int argc, char* argv[])
 
 	po::options_description desc;
 	desc.add_options()
+		("help,h", po::value<bool>()->implicit_value(true)->zero_tokens(), "prints command usage")
 		("commit-id", po::wvalue<std::string>())
 		;
 
@@ -501,6 +571,12 @@ void cmd_checkout(int argc, char* argv[])
 		.options(desc)
 		.positional(pos).run(), vm);
 	po::notify(vm);
+
+	if (vm.count("help"))
+	{
+		std::cout << desc << std::endl;
+		return;
+	}
 
 	init_for_git_commands();
 
@@ -525,6 +601,7 @@ void cmd_cat_file(int argc, char* argv[])
 
 	po::options_description desc;
 	desc.add_options()
+		("help,h", po::value<bool>()->implicit_value(true)->zero_tokens(), "prints command usage")
 		("object", po::value<std::string>()->required())
 		(",t", po::value<bool>()->implicit_value(true)->zero_tokens())
 		(",s", po::value<bool>()->implicit_value(true)->zero_tokens())
@@ -536,6 +613,12 @@ void cmd_cat_file(int argc, char* argv[])
 		.options(desc)
 		.positional(pos).run(), vm);
 	po::notify(vm);
+
+	if (vm.count("help"))
+	{
+		std::cout << desc << std::endl;
+		return;
+	}
 
 	conflicting_options(vm, "-t", "-p");
 	conflicting_options(vm, "-t", "-s");
@@ -561,6 +644,7 @@ void cmd_ls_files(int argc, char* argv[])
 
 	po::options_description desc;
 	desc.add_options()
+	("help,h", po::value<bool>()->implicit_value(true)->zero_tokens(), "prints command usage")
 		;
 
 	po::variables_map vm;
@@ -568,6 +652,12 @@ void cmd_ls_files(int argc, char* argv[])
 		.options(desc)
 		.positional(pos).run(), vm);
 	po::notify(vm);
+
+	if (vm.count("help"))
+	{
+		std::cout << desc << std::endl;
+		return;
+	}
 
 	init_for_git_commands();
 
@@ -591,6 +681,7 @@ void cmd_config(int argc, char* argv[])
 
 	po::options_description desc;
 	desc.add_options()
+		("help,h", po::value<bool>()->implicit_value(true)->zero_tokens(), "prints command usage")
 		("name", po::value<std::string>()->required())
 		("value", po::value<std::string>()->required())
 		;
@@ -600,6 +691,12 @@ void cmd_config(int argc, char* argv[])
 		.options(desc)
 		.positional(pos).run(), vm);
 	po::notify(vm);
+
+	if (vm.count("help"))
+	{
+		std::cout << desc << std::endl;
+		return;
+	}
 
 	write_config(Globals::ConfigFile, vm["name"].as<std::string>(), vm["value"].as<std::string>());
 }
