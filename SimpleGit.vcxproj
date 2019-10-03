@@ -75,7 +75,7 @@
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <LinkIncremental>true</LinkIncremental>
-    <LibraryPath>C:\Program Files\boost\boost_1_70_0\stage\lib;$(LibraryPath)</LibraryPath>
+    <LibraryPath>C:\Program Files\Boost\boost_1_71_0\stage\lib;$(LibraryPath)</LibraryPath>
     <TargetName>sgit</TargetName>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
@@ -108,7 +108,7 @@
       <PreprocessorDefinitions>_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpp17</LanguageStandard>
-      <AdditionalIncludeDirectories>C:\Program Files\boost\boost_1_70_0;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(SolutionDir)termcolor\include\;C:\Program Files\boost\boost_1_71_0;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <AdditionalOptions>/D _SILENCE_CXX17_CODECVT_HEADER_DEPRECATION_WARNING /D _CRT_SECURE_NO_WARNINGS %(AdditionalOptions)</AdditionalOptions>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
     </ClCompile>
@@ -166,11 +166,11 @@
     <ClCompile Include="commands.cpp" />
     <ClCompile Include="commit.cpp" />
     <ClCompile Include="config.cpp" />
+    <ClCompile Include="diff.cpp" />
     <ClCompile Include="filesystem.cpp" />
     <ClCompile Include="globals.cpp" />
     <ClCompile Include="helper.cpp" />
     <ClCompile Include="index.cpp" />
-    <ClCompile Include="index_two_tree_iterator.cpp" />
     <ClCompile Include="merge.cpp" />
     <ClCompile Include="object.cpp" />
     <ClCompile Include="ref.cpp" />
@@ -202,6 +202,7 @@
     <ClInclude Include="commit.h" />
     <ClInclude Include="config.h" />
     <ClInclude Include="defs.h" />
+    <ClInclude Include="diff.h" />
     <ClInclude Include="error.h" />
     <ClInclude Include="exception.h" />
     <ClInclude Include="filesystem.h" />
@@ -215,6 +216,7 @@
     <ClInclude Include="sha1.h" />
     <ClInclude Include="tag.h" />
     <ClInclude Include="tree.h" />
+    <ClInclude Include="two_tree_iterator.h" />
     <ClInclude Include="zlib\crc32.h" />
     <ClInclude Include="zlib\deflate.h" />
     <ClInclude Include="zlib\gzguts.h" />

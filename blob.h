@@ -1,5 +1,7 @@
 #pragma once
 
+#include <sstream>
+
 #include "defs.h"
 #include "object.h"
 
@@ -8,10 +10,17 @@ class BlobReader : public ObjectReader
 	friend class Object;
 
 public:
-	virtual std::ostream& pretty_print(std::ostream& out_stream) override
+	virtual std::ostream&		pretty_print(std::ostream& out_stream) override
 	{
 		out_stream << _curr_pos;
 		return out_stream;
+	}
+
+	std::vector<std::string>	read_lines()
+	{
+		std::vector<std::string> lines;
+		std::istringstream ss(_curr_pos);
+		return Filesystem::read_lines(ss);
 	}
 
 	void operator>>(std::string& str)

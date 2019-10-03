@@ -12,21 +12,17 @@ namespace Filesystem
 {
 	enum FileFlags
 	{
-		FILE_FLAG_READONLY = FILE_ATTRIBUTE_READONLY,
-		FILE_FLAG_HIDDEN = FILE_ATTRIBUTE_HIDDEN,
-		FILE_FLAG_OVERWRITE = 4,
-		FILE_FLAG_CREATE_DIRECTORIES = 8,
+		FILE_FLAG_READONLY			= 0,
+		FILE_FLAG_HIDDEN			= 2,
+		FILE_FLAG_OVERWRITE			= 4,
+		FILE_FLAG_CREATE_DIRECTORY	= 8,
 	};
 
 	template <typename FileStream>
-	void open(fs::path path, FileStream& stream, bool create_directory=false)
+	void open(const fs::path& path, FileStream& stream, int flags = 0)
 	{
-		if (create_directory)
-		{
-			fs::path dir = path;
-			dir.remove_filename();
-			Filesystem::create_directory(dir, false);
-		}
+		if (flags & FILE_FLAG_CREATE_DIRECTORY)
+			Filesystem::create_directory(path.parent_path(), flags);
 
 		stream.open(path.string());
 
@@ -34,10 +30,13 @@ namespace Filesystem
 			throw Exception(boost::format("cannot open file: %1%") % path);
 	}
 
-	void create_directory(const fs::path& dir, bool hidden = false);
+	void create_directory(const fs::path& dir, int flags = 0);
 
 	std::string read_content(const fs::path& file);
 	std::string read_content(std::istream& stream);
+
+	std::vector<std::string> read_lines(std::istream& stream);
+	std::vector<std::string> read_lines(const fs::path& file);
 
 	void write_content(const fs::path &file, const std::string &content, int flags = 0);
 	void write_content(const fs::path& file, std::istream& in_stream, int flags = 0);
@@ -45,10 +44,6 @@ namespace Filesystem
 
 	fs::path get_object_path(const std::string& id);
 	fs::path get_object_dir(const std::string& id);
-
-	std::string open_object(const std::string& object_id, std::ifstream& in_stream);
-
-	bool object_exists(const std::string& object_id);
 
 	bool is_prefix(const fs::path& prefix, const fs::path& path);
 

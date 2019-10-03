@@ -29,7 +29,7 @@ struct ObjectData
 
 	// null-terminated string, contains the entire uncompressed content or null,
 	// depending on whether the header_only argument was true to the call of open_object
-	char*		buf;
+	char*		buf = nullptr;
 
 	// the length of the object, not counting the header
 	uint64_t	len;

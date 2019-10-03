@@ -1,0 +1,6 @@
+[submodule "dtl"]
+	path = dtl
+	url = https://github.com/cubicdaiya/dtl
+[submodule "termcolor"]
+	path = termcolor
+	url = https://github.com/ikalnytskyi/termcolor

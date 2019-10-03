@@ -12,7 +12,7 @@ namespace fs = boost::filesystem;
 void write_branch(const std::string& name, const std::string& object_id, int flags)
 {
 	try {
-		Filesystem::write_content(Globals::BranchDir / name, object_id, flags | Filesystem::FILE_FLAG_CREATE_DIRECTORIES);
+		Filesystem::write_content(Globals::BranchDir / name, object_id, flags | Filesystem::FILE_FLAG_CREATE_DIRECTORY);
 	}
 	catch (const FileExistsException&) {
 		throw BranchExistsException(name);

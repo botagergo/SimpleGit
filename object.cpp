@@ -69,20 +69,21 @@ ret:
 
 void write_object(const char* object_file, const char* buf, uint64_t len)
 {
+	const uint64_t size = len * 2; //TODO change this
 	HANDLE file = CreateFileA(object_file, GENERIC_READ | GENERIC_WRITE, 0, NULL, CREATE_ALWAYS, 0, 0);
-	if (file == INVALID_HANDLE_VALUE)
+	if (file == NULL)
 		throw Exception(boost::format("cannot create file: %1%") % object_file);
 
-	HANDLE map = CreateFileMappingA(file, NULL, PAGE_READWRITE, len >> (sizeof(DWORD) * 8), len & ((DWORD)-1), NULL);
+	HANDLE map = CreateFileMappingA(file, NULL, PAGE_READWRITE, 0, size, NULL);
 	if (map == NULL)
 		throw Exception("CreateFileMapping");
 
-	Bytef* ptr = (Bytef*)MapViewOfFile(map, FILE_MAP_WRITE, 0, 0, len & ((DWORD)-1));
+	Bytef* ptr = (Bytef*)MapViewOfFile(map, FILE_MAP_WRITE, 0, 0, size);
 	if (ptr == NULL)
 		throw Exception("MapViewOfFile");
 
-	uLongf ulen = len;
-	compress(ptr, &ulen, (Bytef*)buf, len);
+	uLongf ulen = 1000;
+	compress(ptr, &ulen, (Bytef*)buf, size);
 	UnmapViewOfFile(ptr);
 	CloseHandle(file);
 }
@@ -101,8 +102,9 @@ std::string ObjectWriter::save()
 	_id = get_hash(buf_start, _buf.content_length() + header.str().size());
 
 	// we check if the object already exists, it will throw exception when we try to overwrite otherwise
-	if (Filesystem::object_exists(_id))
+	if (Object(_id).exists())
 		return _id;
+
 
 	Filesystem::create_directory(Filesystem::get_object_dir(_id));
 

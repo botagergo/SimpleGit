@@ -13,6 +13,7 @@
 #include "commands.h"
 #include "commit.h"
 #include "config.h"
+#include "diff.h"
 #include "error.h"
 #include "exception.h"
 #include "filesystem.h"
@@ -57,7 +58,7 @@ void at_least_one_required(const po::variables_map& vm, const std::vector<std::s
 
 void init_filesystem()
 {
-	Filesystem::create_directory(Globals::SimpleGitDir, true);
+	Filesystem::create_directory(Globals::SimpleGitDir, Filesystem::FILE_FLAG_HIDDEN);
 	Filesystem::create_directory(Globals::ObjectDir);
 	Filesystem::create_directory(Globals::RefDir);
 	Filesystem::create_directory(Globals::TagDir);
@@ -375,13 +376,13 @@ void cmd_read_tree(int argc, char* argv[])
 			read_tree_into_index(Globals::IndexFile, tree_ish[0]);
 		if (tree_ish.size() == 2)
 			read_tree_into_index(Globals::IndexFile,
-				resolve_tree(tree_ish[0]),
-				resolve_tree(tree_ish[1]));
+				resolve_to_tree(tree_ish[0]),
+				resolve_to_tree(tree_ish[1]));
 		else
 			;
 	}
 	else
-		resolve_tree(vm["tree-ish"].as<std::vector<std::string>>()[0]);
+		resolve_to_tree(vm["tree-ish"].as<std::vector<std::string>>()[0]);
 }
 
 void cmd_write_tree(int argc, char* argv[])
@@ -699,4 +700,87 @@ void cmd_config(int argc, char* argv[])
 	}
 
 	write_config(Globals::ConfigFile, vm["name"].as<std::string>(), vm["value"].as<std::string>());
+}
+
+void cmd_diff(int argc, char* argv[])
+{
+	po::positional_options_description pos;
+	pos.add("args", -1);
+
+	po::options_description desc;
+	desc.add_options()
+		("help,h", po::value<bool>()->implicit_value(true)->zero_tokens(), "prints command usage")
+		("args", po::value<std::vector<std::string>>())
+		;
+
+	po::positional_options_description pos_blob;
+	pos_blob.add("blob", 2);
+
+	po::options_description desc_blob;
+	desc_blob.add_options()
+		("help,h", po::value<bool>()->implicit_value(true)->zero_tokens(), "prints command usage")
+		("blob", po::value<std::vector<std::string>>())
+		;
+	
+	po::positional_options_description pos_treeish;
+	pos_treeish.add("tree-ish", 2);
+
+	po::options_description desc_treeish;
+	desc_treeish.add_options()
+		("help,h", po::value<bool>()->implicit_value(true)->zero_tokens(), "prints command usage")
+		("tree-ish", po::value<std::vector<std::string>>()->required())
+		;
+
+	po::variables_map vm;
+	po::store(po::basic_command_line_parser<char>(argc, argv)
+		.options(desc)
+		.positional(pos)
+		.allow_unregistered()
+		.run(), vm);
+
+	po::notify(vm);
+
+	// if the index file doesn't exist, we have nothing to do
+	if (!fs::exists(Globals::IndexFile))
+		return;
+
+	std::vector<std::string> args = vm.count("args") ? vm["args"].as<std::vector<std::string>>() : std::vector<std::string>();
+	if (args.size() == 2)
+	{
+		std::string id1, id2;
+		if (try_resolve_to_blob(args[0], id1) && try_resolve_to_blob(args[1], id2))
+		{
+			po::variables_map vm;
+			po::store(po::basic_command_line_parser<char>(argc, argv)
+				.options(desc_blob)
+				.positional(pos_blob).run(), vm);
+			po::notify(vm);
+
+
+			Diff d(Object(id1).get_blob_reader()->read_lines(),
+				Object(id2).get_blob_reader()->read_lines());
+
+			d.calculate();
+			d.print();
+		}
+		else if (try_resolve_to_tree(args[0], id1) && try_resolve_to_tree(args[1], id2))
+		{
+			po::variables_map vm;
+			po::store(po::basic_command_line_parser<char>(argc, argv)
+				.options(desc_treeish)
+				.positional(pos_treeish).run(), vm);
+			po::notify(vm);
+
+			return diff_tree(id1, id2);
+		}
+	}
+	else if (std::all_of(args.begin(), args.end(), [](const fs::path& path) {return fs::exists(path); }))
+		diff_index(Globals::IndexFile, std::vector<fs::path>(args.begin(), args.end()));
+	else
+		error("invalid combination of positional arguments");
+}
+
+void cmd_test(int argc, char* argv[])
+{
+	Filesystem::create_directory("C:\\Program Files\\mydir");
 }

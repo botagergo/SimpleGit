@@ -63,9 +63,6 @@
     <ClCompile Include="merge.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="index_two_tree_iterator.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="zlib\adler32.c">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -112,6 +109,9 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="sha1.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="diff.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
@@ -208,6 +208,12 @@
     </ClInclude>
     <ClInclude Include="defs.h">
       <Filter>Source Files</Filter>
+    </ClInclude>
+    <ClInclude Include="diff.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="two_tree_iterator.h">
+      <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

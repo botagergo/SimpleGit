@@ -5,7 +5,8 @@
 
 #include <windows.h>
 
-#include <boost/program_options/errors.hpp>
+#include "boost/program_options/errors.hpp"
+
 
 #include "blob.h"
 #include "commands.h"
@@ -19,7 +20,7 @@
 #include "tag.h"
 
 //#define TEST
-#define WAIT_FOR_ENTER
+//#define WAIT_FOR_ENTER
 
 std::map<std::string, void (*)(int argc, char* argv[])> command_map {
 	{"init", cmd_init},
@@ -36,6 +37,8 @@ std::map<std::string, void (*)(int argc, char* argv[])> command_map {
 	{"cat-file", cmd_cat_file},
 	{"ls-files", cmd_ls_files},
 	{"config", cmd_config},
+	{"diff", cmd_diff},
+	{"test", cmd_test},
 };
 
 void clear_filesystem()

@@ -76,7 +76,7 @@ char hex_char_to_byte(char ch)
 	case 'c': return 12;
 	case 'd': return 13;
 	case 'e': return 14;
-	case 'f': return 14;
+	case 'f': return 15;
 	default: assert(false); return 0;
 	}
 }

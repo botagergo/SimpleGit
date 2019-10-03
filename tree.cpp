@@ -16,7 +16,7 @@
 
 std::ostream& operator<<(std::ostream& ostream, const TreeRecord& record)
 {
-	return ostream << record.kind << " " << record.id << " " << record.path.string() << "\n";
+	return ostream << record.kind << " " << record.id << " " << record.path.string();
 }
 
 std::istream& operator>>(std::istream& istream, TreeRecord& record)
@@ -47,7 +47,7 @@ std::string write_tree(const fs::path& prefix, bool ignore_missing)
 		if (history.size() <= curr_level)
 			history.resize(curr_level + 1);
 
-		if (!ignore_missing && !Filesystem::object_exists(record.id))
+		if (!ignore_missing && !Object(record.id).exists())
 			throw ObjectNotFoundException(record.id);
 
 		history[curr_level].push_back(TreeRecord("blob", "100644", record.id, record.path));
@@ -124,24 +124,17 @@ std::string write_tree(const std::vector<TreeRecord>& records)
 
 void read_tree(const std::string& tree_id, const fs::path& root_dir)
 {
-	std::ifstream in_stream;
-	Filesystem::open(Filesystem::get_object_path(tree_id), in_stream);
-
-	std::string object_type;
-	in_stream >> object_type;
-
-	if (object_type != "tree")
-		throw NotTreeException(tree_id);
+	auto tree_reader = Object(tree_id).get_tree_reader();
 
 	TreeRecord record;
-	while (in_stream >> record)
+	while (*tree_reader >> record)
 	{
 		if (record.kind == "blob")
 			read_blob(record.id, root_dir / record.path);
 		else if (record.kind == "tree")
 			read_tree(record.id, root_dir);
 		else
-			throw TreeFileCorrupted(tree_id);
+			throw Exception(boost::format("invalid tree record kind: ") % record.kind);
 	}
 }
 

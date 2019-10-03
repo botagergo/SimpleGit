@@ -15,7 +15,7 @@ std::string write_blob(const std::string &content)
 void read_blob(const std::string& blob_id, const fs::path& file)
 {
 	std::ofstream out_stream;
-	Filesystem::open(file, out_stream, true);
+	Filesystem::open(file, out_stream, Filesystem::FILE_FLAG_CREATE_DIRECTORY);
 
 	Object blob(blob_id);
 	blob.get_blob_reader()->read_content(out_stream);

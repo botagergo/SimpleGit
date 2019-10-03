@@ -143,14 +143,10 @@ void update_index(const std::vector<fs::path>& files, int flags)
 
 void read_tree_into_index(std::ostream& out_stream, const std::string& tree_id)
 {
-	std::ifstream in_stream;
-	std::string object_kind = Filesystem::open_object(tree_id, in_stream);
-
-	if (object_kind != "tree")
-		throw NotTreeException(tree_id);
+	auto tree_reader = Object(tree_id).get_tree_reader();
 
 	TreeRecord record;
-	while (in_stream >> record)
+	while (*tree_reader >> record)
 	{
 		if (record.kind == "blob")
 			out_stream << IndexRecord(record.id, record.path) << '\n';
@@ -175,16 +171,13 @@ void read_tree_into_index(const fs::path& index_file, const std::string& tree1_i
 	std::ofstream index_out_stream;
 
 	Filesystem::make_sure_file_exists(index_file);
-
 	Filesystem::open(index_file, index_in_stream);
-	if (Filesystem::open_object(tree1_id, tree1_in_stream) != "tree")
-		throw NotTreeException(tree1_id);
-	if (Filesystem::open_object(tree2_id, tree2_in_stream) != "tree")
-		throw NotTreeException(tree2_id);
-
 	Filesystem::open(tmp_index_file, index_out_stream);
 
-	IndexTwoTreeIterator iter(index_in_stream, tree1_in_stream, tree2_in_stream);
+	auto tree1_reader = Object(tree1_id).get_tree_reader();
+	auto tree2_reader = Object(tree2_id).get_tree_reader();
+
+	IndexTwoTreeIterator iter(index_in_stream, *tree1_reader, *tree2_reader);
 	for (;!iter.end(); iter.next())
 	{
 		if (!iter.hasIndex() && !iter.hasTree1() && iter.hasTree2())
