@@ -12,6 +12,9 @@ namespace Filesystem
 {
 	void create_directory(const fs::path &dir, int flags)
 	{
+		if (dir.empty())
+			return;
+
 		boost::system::error_code ec;
 		fs::create_directories(dir, ec);
 		if(ec.failed())

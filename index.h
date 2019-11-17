@@ -29,7 +29,8 @@ enum UpdateIndexFlags
 
 struct IndexRecord
 {
-	IndexRecord(std::string id, fs::path path) : id(id), path(path) {}
+	IndexRecord(std::string id, fs::path path, time_t mtime, std::string mode) 
+		: id(id), path(path), mtime(mtime), mode(mode) {}
 	IndexRecord() {}
 
 	std::string		id;

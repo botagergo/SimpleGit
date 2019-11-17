@@ -21,10 +21,13 @@ void set_working_directory(const std::string& tree_id)
 	read_tree(tree_id);
 }
 
-void checkout(const std::string& commit_id)
+void checkout(const std::string& commit_id, bool keep_working_directory, bool keep_index)
 {
 	Commit commit;
 	*Object(commit_id).get_commit_reader() >> commit;
-	read_tree_into_index(Globals::IndexFile, commit.tree_id);
-	set_working_directory(commit.tree_id);
+
+	if (!keep_index)
+		read_tree_into_index(Globals::IndexFile, commit.tree_id);
+	if (!keep_working_directory)
+		set_working_directory(commit.tree_id);
 }

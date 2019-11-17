@@ -149,7 +149,7 @@ void read_tree_into_index(std::ostream& out_stream, const std::string& tree_id)
 	while (*tree_reader >> record)
 	{
 		if (record.kind == "blob")
-			out_stream << IndexRecord(record.id, record.path) << '\n';
+			out_stream << IndexRecord(record.id, record.path, 0, record.mode) << '\n';
 		else
 			read_tree_into_index(out_stream, record.id);
 	}
@@ -181,7 +181,7 @@ void read_tree_into_index(const fs::path& index_file, const std::string& tree1_i
 	for (;!iter.end(); iter.next())
 	{
 		if (!iter.hasIndex() && !iter.hasTree1() && iter.hasTree2())
-			index_out_stream << IndexRecord(iter.tree2().id, iter.tree2().path) << '\n';
+			index_out_stream << IndexRecord(iter.tree2().id, iter.tree2().path, 0, iter.tree2().mode) << '\n';
 		else if (!iter.hasIndex() && iter.hasTree1() && !iter.hasTree2())
 			continue;
 		else if (!iter.hasIndex() && iter.hasTree1() && iter.hasTree2())
@@ -203,7 +203,7 @@ void read_tree_into_index(const fs::path& index_file, const std::string& tree1_i
 		else if (iter.hasTree1() && iter.hasTree2() && iter.index().id != iter.tree1().id && iter.index().id == iter.tree2().id && iter.tree1().id != iter.tree2().id)
 			index_out_stream << iter.index() << '\n';
 		else if (clean && iter.index().id == iter.tree1().id && iter.index().id != iter.tree1().id && iter.tree1().id != iter.tree2().id)
-			index_out_stream << IndexRecord(iter.tree2().id, iter.tree2().path) << '\n';
+			index_out_stream << IndexRecord(iter.tree2().id, iter.tree2().path, 0, iter.tree2().mode) << '\n';
 		else if (!clean && iter.index().id == iter.tree1().id && iter.index().id != iter.tree1().id && iter.tree1().id != iter.tree2().id)
 			throw MergeConflictException();
 		else

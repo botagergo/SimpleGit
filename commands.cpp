@@ -100,7 +100,7 @@ void cmd_init(int argc, char* argv[])
 	if (!fs::exists(Globals::SimpleGitDir))
 	{
 		init_filesystem();
-		message("Initialized empty Git repository in " + fs::absolute(Globals::SimpleGitDir).string());
+		message("initialized empty git repository in " + fs::absolute(Globals::SimpleGitDir).string());
 	}
 	else
 		error("git repository already exists: " + fs::absolute(Globals::SimpleGitDir).string());
@@ -179,7 +179,7 @@ void cmd_update_index(int argc, char* argv[])
 	else if (vm.count("remove"))
 		flags = UPDATE_INDEX_REMOVE;
 	else if (vm.count("force-remove"))
-		flags = UPDATE_INDEX_REMOVE | UPDATE_INDEX_FORCE_REMOVE;
+		flags = UPDATE_INDEX_FORCE_REMOVE;
 
 	update_index(vm["files"].as<std::vector<fs::path>>(), flags);
 }
@@ -287,7 +287,7 @@ void cmd_tag(int argc, char* argv[])
 			.add("tagname", -1)
 			;
 		desc.add_options()
-			("tagname", po::wvalue<std::string>())
+			("tagname", po::value<std::string>())
 			;
 	}
 	else if (root_vm.count("list"))
@@ -304,8 +304,8 @@ void cmd_tag(int argc, char* argv[])
 			.add("commit", 1)
 			;
 		desc.add_options()
-			("tagname", po::wvalue<std::string>())
-			("commit", po::wvalue<std::string>())
+			("tagname", po::value<std::string>())
+			("commit", po::value<std::string>())
 			;
 	}
 
@@ -778,6 +778,51 @@ void cmd_diff(int argc, char* argv[])
 		diff_index(Globals::IndexFile, std::vector<fs::path>(args.begin(), args.end()));
 	else
 		error("invalid combination of positional arguments");
+}
+
+void cmd_reset(int argc, char* argv[])
+{
+	po::positional_options_description pos;
+	pos.add("commit", 1);
+
+	po::options_description desc;
+	desc.add_options()
+		("help,h", po::value<bool>()->implicit_value(true)->zero_tokens(), "prints command usage")
+		("soft", po::value<bool>()->implicit_value(true)->zero_tokens(), "does not modify the working tree or the index")
+		("mixed", po::value<bool>()->implicit_value(true)->zero_tokens(), "resets the index but not the working tree")
+		("hard", po::value<bool>()->implicit_value(true)->zero_tokens(), "resets the index and the working tree")
+		("commit", po::value<std::string>(), "target commit")
+		;
+
+	po::variables_map vm;
+	po::store(po::basic_command_line_parser<char>(argc, argv)
+		.options(desc)
+		.positional(pos).run(), vm);
+	po::notify(vm);
+
+	conflicting_options(vm, "soft", "mixed");
+	conflicting_options(vm, "mixed", "hard");
+	conflicting_options(vm, "soft", "hard");
+
+	at_least_one_required(vm, { "soft", "mixed", "hard" });
+
+	if (vm.count("help"))
+	{
+		std::cout << desc << std::endl;
+		return;
+	}
+
+	std::string commit_id = resolve_to_commit(vm["commit"].as<std::string>());
+
+	bool keep_index = vm.count("soft");
+	bool keep_working_directory = !vm.count("hard");
+
+	checkout(commit_id, keep_working_directory, keep_index);
+
+	Commit commit;
+	*(Object(commit_id).get_commit_reader()) >> commit;
+
+	std::cout << "HEAD is now at " << commit_id << " " << commit.message << "\n";
 }
 
 void cmd_test(int argc, char* argv[])

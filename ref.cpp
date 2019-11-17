@@ -61,7 +61,7 @@ std::string resolve_branch(const std::string& branch_name)
 	return Filesystem::read_content(Globals::BranchDir / branch_name);
 }
 
-std::string resolve_blob(const std::string& ref)
+std::string resolve_to_blob(const std::string& ref)
 {
 	if (ref.size() >= 4)
 	{
@@ -102,7 +102,7 @@ std::string resolve_to_tree(const std::string& ref)
 
 std::string resolve_to_commit(const std::string& ref)
 {
-	std::string object_id = resolve_to_object(ref);
+	std::string object_id = resolve_ref(ref);
 	std::string object_kind = Object(object_id).kind();
 
 	if (object_kind != "commit")
@@ -111,34 +111,30 @@ std::string resolve_to_commit(const std::string& ref)
 	return object_id;
 }
 
-std::string resolve_to_object(const std::string& ref)
+std::string resolve_to_branch(const std::string& ref)
 {
 	if (is_branch(ref))
-		return resolve_branch(ref);
-	else if (is_tag(ref))
-		return resolve_tag(ref);
+		return ref;
 	else
-		return expand_object_id_prefix(ref);
+		throw Exception("\"ref\" is not a branch");
 }
 
 std::string resolve_head()
 {
-	try {
-		std::string name = Filesystem::read_content(Globals::HeadFile);
-		if (is_branch(name))
-			return resolve_branch(name);
-		else
-			return name;
-	}
-	catch (const FileOpenException&) {
-		throw HeadDoesntExistException();
-	}
+	if (!fs::exists(Globals::HeadFile))
+		throw Exception("head doesn't exist");
+
+	std::string name = Filesystem::read_content(Globals::HeadFile);
+	if (is_branch(name))
+		return resolve_branch(name);
+	else
+		return name;
 }
 
 bool try_resolve_to_blob(const std::string& ref, std::string& blob_id)
 {
 	try {
-		blob_id = resolve_blob(ref);
+		blob_id = resolve_to_blob(ref);
 		return true;
 	}
 	catch (const std::exception&) {
@@ -184,6 +180,23 @@ bool try_resolve_to_commit(const std::string& ref)
 {
 	std::string dummy;
 	return try_resolve_to_commit(ref, dummy);
+}
+
+bool try_resolve_to_branch(const std::string& ref, std::string& branch_name)
+{
+	try {
+		branch_name = resolve_to_branch(ref);
+		return true;
+	}
+	catch (const Exception&) {
+		return false;
+	}
+}
+
+bool try_resolve_to_branch(const std::string& ref)
+{
+	std::string dummy;
+	return try_resolve_to_branch(ref, dummy);
 }
 
 bool match_object_id(const std::string& prefix, const std::string& object_id)

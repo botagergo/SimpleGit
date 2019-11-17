@@ -7,7 +7,6 @@
 
 #include "boost/program_options/errors.hpp"
 
-
 #include "blob.h"
 #include "commands.h"
 #include "config.h"
@@ -38,6 +37,7 @@ std::map<std::string, void (*)(int argc, char* argv[])> command_map {
 	{"ls-files", cmd_ls_files},
 	{"config", cmd_config},
 	{"diff", cmd_diff},
+	{"reset", cmd_reset},
 	{"test", cmd_test},
 };
 
