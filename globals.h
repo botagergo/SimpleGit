@@ -22,10 +22,15 @@ namespace Globals
 	extern fs::path			ConfigFile;
 	extern fs::path			HeadFile;
 
+	extern fs::path			CommitMessageTmpFile;
+
 	extern std::map<std::string, std::string>	Config;
 
 	extern const size_t		IdPrefixLength;
 	extern const size_t		MaxObjectHeaderSize;
 
 	extern bool				Debug;
+	extern fs::path			ExecutableDir;
+
+	extern std::string		EditorCommand;
 };

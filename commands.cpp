@@ -195,7 +195,8 @@ void cmd_commit(int argc, char* argv[])
 	po::options_description desc;
 	desc.add_options()
 		("help,h", po::value<bool>()->implicit_value(true)->zero_tokens(), "prints command usage")
-		("message,m", po::value<std::string>()->required(), "commit message")
+		("message,m", po::value<std::string>(), "commit message")
+		("file,F", po::value<std::string>(), "commit message file")
 		;
 
 	po::variables_map vm;
@@ -220,7 +221,16 @@ void cmd_commit(int argc, char* argv[])
 	commit.tree_id = tree_id;
 	commit.committer = Globals::Config["user.name"];
 	commit.author = Globals::Config["user.name"];
-	commit.message = vm["message"].as<std::string>();
+
+	if (vm.count("message"))
+		commit.message = vm["message"].as<std::string>();
+	else if (vm.count("file"))
+		commit.message = Filesystem::read_content(vm["file"].as<std::string>());
+	else
+		commit.message = get_commit_message();
+
+	std::string one_line_commit_message = commit.message;
+	std::replace(one_line_commit_message.begin(), one_line_commit_message.end(), '\n', ' ');
 
 	bool root_commit = !fs::exists(Globals::HeadFile);
 	bool not_detached = true;
@@ -241,18 +251,18 @@ void cmd_commit(int argc, char* argv[])
 	if (!root_commit && not_detached)
 	{
 		write_branch(head, commit_id, Filesystem::FILE_FLAG_OVERWRITE);
-		message(boost::format("[%1% %2%] %3%") % head % commit_id % commit.message);
+		message(boost::format("[%1% %2%] %3%") % head % commit_id % one_line_commit_message);
 	}
 	else if (root_commit)
 	{
 		write_branch("master", commit_id, Filesystem::FILE_FLAG_OVERWRITE);
 		write_head("master");
-		message(boost::format("[master (root-commit) %1%] %2%") % commit_id % commit.message);
+		message(boost::format("[master (root-commit) %1%] %2%") % commit_id % one_line_commit_message);
 	}
 	else if (!not_detached)
 	{
 		write_head(commit_id);
-		message(boost::format("[detached HEAD %1%] %2%") % commit_id % commit.message);
+		message(boost::format("[detached HEAD %1%] %2%") % commit_id % one_line_commit_message);
 	}
 }
 

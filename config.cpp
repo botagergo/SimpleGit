@@ -4,7 +4,7 @@
 #include "locale.h"
 
 #include <boost/algorithm/string/trim.hpp>
-#include <boost/filesystem/path.hpp>
+#include <boost/filesystem.hpp>
 
 #include "config.h"
 #include "exception.h"
@@ -12,6 +12,9 @@
 
 std::map<std::string, std::string> read_config(const fs::path& config_file)
 {
+	if (!fs::exists(config_file))
+		return {};
+
 	std::map<std::string, std::string> config;
 	std::fstream in_stream;
 
@@ -49,6 +52,8 @@ void write_config(const fs::path& config_file, const std::map<std::string, std::
 
 void write_config(const fs::path& config_file, const std::string& name, const std::string& value)
 {
+	Filesystem::make_sure_file_exists(config_file);
+
 	auto config = read_config(config_file);
 	config[name] = value;
 	write_config(config_file, config);

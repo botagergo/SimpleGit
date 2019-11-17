@@ -1,6 +1,10 @@
 #include <fstream>
 #include <windows.h>
 #include <codecvt>
+#include <sstream>
+
+#include <boost/filesystem.hpp>
+#include <boost/algorithm/string/trim.hpp>
 
 #include "exception.h"
 #include "filesystem.h"
@@ -86,4 +90,65 @@ time_t get_time_t_now()
 	time_t now;
 	time(&now);
 	return now;
+}
+
+std::string get_default_git_editor()
+{
+	char buf[255];
+	GetSystemDirectoryA(buf, 255);
+	return (fs::path(buf) / "notepad.exe").string();
+}
+
+std::string get_git_editor()
+{
+	const char* dir = nullptr;
+	for (const char* varname : { "GIT_EDITOR", "VISUAL", "EDITOR" })
+	{
+		dir = std::getenv(varname);
+		if (dir)
+			return dir;
+	}
+
+	return get_default_git_editor();
+}
+
+std::string get_commit_message()
+{
+	std::ostringstream cmd;
+	cmd << Globals::EditorCommand  << " " << Globals::CommitMessageTmpFile;
+
+	fs::copy_file(Globals::ExecutableDir / "COMMIT_EDITMSG_template.txt", Globals::SimpleGitDir / "COMMIT_EDITMSG", fs::copy_option::overwrite_if_exists);
+
+	PROCESS_INFORMATION pi;
+	STARTUPINFOA si;
+	ZeroMemory(&si, sizeof(si));
+	si.cb = sizeof(si);
+	ZeroMemory(&pi, sizeof(pi));
+
+	BOOL ret = CreateProcessA(nullptr, (char*)cmd.str().c_str(), nullptr, nullptr, 0, 0, nullptr, nullptr, &si, &pi);
+	if (ret <= 0)
+	{
+		char buf[256];
+		FormatMessageA(FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS,
+			NULL, GetLastError(), MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT),
+			buf, (sizeof(buf) / sizeof(char)), NULL);
+		throw Exception(buf);
+	}
+
+	WaitForSingleObject(pi.hProcess, INFINITE);
+
+	std::vector<std::string> lines = Filesystem::read_lines(Globals::CommitMessageTmpFile);
+	std::ostringstream msg;
+
+	for (std::string line : lines)
+	{
+		boost::algorithm::trim(line);
+		if (!line.empty() && line[0] != '#')
+			msg << line << '\n';
+	}
+
+	if (msg.str().empty())
+		throw Exception("Aborting commit due to empty commit message.");
+
+	return msg.str().substr(0, msg.str().size() - 1);
 }

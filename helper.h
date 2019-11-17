@@ -1,6 +1,7 @@
 #pragma once
 
 #include <string>
+#include <windows.h>
 
 #include <boost/filesystem/path.hpp>
 
@@ -23,3 +24,8 @@ char int_to_hex_char(unsigned a);
 char hex_char_to_byte(char ch);
 
 time_t get_time_t_now();
+
+std::string get_default_git_editor();
+std::string get_git_editor();
+
+std::string get_commit_message();

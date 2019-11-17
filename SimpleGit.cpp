@@ -6,6 +6,7 @@
 #include <windows.h>
 
 #include "boost/program_options/errors.hpp"
+#include "boost/dll.hpp"
 
 #include "blob.h"
 #include "commands.h"
@@ -74,6 +75,11 @@ void initPathConstants()
 
 	Globals::IndexFile = Globals::SimpleGitDir / "INDEX";
 	Globals::HeadFile = Globals::SimpleGitDir / "HEAD";
+
+	Globals::CommitMessageTmpFile = Globals::SimpleGitDir / "COMMIT_EDITMSG";
+	Globals::ExecutableDir = boost::dll::program_location().parent_path();
+
+	Globals::EditorCommand = get_git_editor();
 }
 
 #include <fstream>

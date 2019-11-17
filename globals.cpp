@@ -17,6 +17,8 @@ namespace Globals
 	fs::path			IndexFile;
 	fs::path			HeadFile;
 
+	fs::path			CommitMessageTmpFile;
+
 	std::string			Head;
 
 	std::map<std::string, std::string>	Config;
@@ -25,4 +27,7 @@ namespace Globals
 	const size_t		MaxObjectHeaderSize = 32;
 
 	bool				Debug = false;
+	fs::path			ExecutableDir;
+
+	std::string			EditorCommand;
 };
