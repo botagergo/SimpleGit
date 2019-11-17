@@ -229,6 +229,9 @@ void cmd_commit(int argc, char* argv[])
 	else
 		commit.message = get_commit_message();
 
+	if (commit.message.empty())
+		throw Exception("Aborting commit due to empty commit message.");
+
 	std::string one_line_commit_message = commit.message;
 	std::replace(one_line_commit_message.begin(), one_line_commit_message.end(), '\n', ' ');
 

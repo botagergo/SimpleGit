@@ -125,8 +125,7 @@ std::string get_commit_message()
 	si.cb = sizeof(si);
 	ZeroMemory(&pi, sizeof(pi));
 
-	BOOL ret = CreateProcessA(nullptr, (char*)cmd.str().c_str(), nullptr, nullptr, 0, 0, nullptr, nullptr, &si, &pi);
-	if (ret <= 0)
+	if (CreateProcessA(nullptr, (char*)cmd.str().c_str(), nullptr, nullptr, 0, 0, nullptr, nullptr, &si, &pi) <= 0)
 	{
 		char buf[256];
 		FormatMessageA(FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS,
@@ -147,8 +146,7 @@ std::string get_commit_message()
 			msg << line << '\n';
 	}
 
-	if (msg.str().empty())
-		throw Exception("Aborting commit due to empty commit message.");
-
-	return msg.str().substr(0, msg.str().size() - 1);
+	std::string ret = msg.str();
+	boost::algorithm::trim(ret);
+	return ret;
 }
