@@ -77,7 +77,12 @@ void diff_index(const fs::path& index_file, const std::vector<fs::path>& files)
 					d.print();
 					std::cout << '\n';
 				}
+				else if (Globals::Debug)
+					std::cout << record.path.string() << ": no diff" << std::endl;
+
 			}
+			else if (Globals::Debug)
+				std::cout << record.path.string() << ": no diff, times of last modification are the same" << std::endl;
 		}
 	}
 }

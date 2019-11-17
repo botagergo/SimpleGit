@@ -27,7 +27,7 @@ std::map<std::string, std::string> read_config(const fs::path& config_file)
 		std::string right = line.substr(mid + 1);
 		boost::algorithm::trim(right);
 
-		if (left.size() == 0 || right.size() == 0)
+		if (left.size() == 0)
 			throw InvalidConfigFileFormatException(config_file);
 
 		config.insert(std::make_pair(left, right));

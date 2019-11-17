@@ -80,3 +80,10 @@ char hex_char_to_byte(char ch)
 	default: assert(false); return 0;
 	}
 }
+
+time_t get_time_t_now()
+{
+	time_t now;
+	time(&now);
+	return now;
+}

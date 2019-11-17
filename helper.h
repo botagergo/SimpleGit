@@ -21,3 +21,5 @@ ForwardIt binary_search(ForwardIt first, ForwardIt last, const T& value)
 
 char int_to_hex_char(unsigned a);
 char hex_char_to_byte(char ch);
+
+time_t get_time_t_now();

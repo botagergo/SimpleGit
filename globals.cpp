@@ -23,4 +23,6 @@ namespace Globals
 
 	const size_t		IdPrefixLength = 2;
 	const size_t		MaxObjectHeaderSize = 32;
+
+	bool				Debug = false;
 };

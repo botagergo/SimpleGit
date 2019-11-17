@@ -71,6 +71,10 @@ void init_filesystem()
 void init_for_git_commands()
 {
 	Globals::Config = read_config(Globals::ConfigFile);
+	if (Globals::Config.find("debug") != Globals::Config.end())
+		Globals::Debug = true;
+	else
+		Globals::Debug = false;
 }
 
 void cmd_init(int argc, char* argv[])
@@ -373,7 +377,7 @@ void cmd_read_tree(int argc, char* argv[])
 	{
 		std::vector<std::string> tree_ish = vm["tree-ish"].as<std::vector<std::string>>();
 		if (tree_ish.size() == 1)
-			read_tree_into_index(Globals::IndexFile, tree_ish[0]);
+			read_tree_into_index(Globals::IndexFile, tree_ish[0], false);
 		if (tree_ish.size() == 2)
 			read_tree_into_index(Globals::IndexFile,
 				resolve_to_tree(tree_ish[0]),
@@ -684,7 +688,7 @@ void cmd_config(int argc, char* argv[])
 	desc.add_options()
 		("help,h", po::value<bool>()->implicit_value(true)->zero_tokens(), "prints command usage")
 		("name", po::value<std::string>()->required())
-		("value", po::value<std::string>()->required())
+		("value", po::value<std::string>()->default_value(""))
 		;
 
 	po::variables_map vm;
@@ -698,6 +702,8 @@ void cmd_config(int argc, char* argv[])
 		std::cout << desc << std::endl;
 		return;
 	}
+
+	init_for_git_commands();
 
 	write_config(Globals::ConfigFile, vm["name"].as<std::string>(), vm["value"].as<std::string>());
 }
@@ -739,6 +745,8 @@ void cmd_diff(int argc, char* argv[])
 		.run(), vm);
 
 	po::notify(vm);
+
+	init_for_git_commands();
 
 	// if the index file doesn't exist, we have nothing to do
 	if (!fs::exists(Globals::IndexFile))
@@ -812,6 +820,8 @@ void cmd_reset(int argc, char* argv[])
 		return;
 	}
 
+	init_for_git_commands();
+
 	std::string commit_id = resolve_to_commit(vm["commit"].as<std::string>());
 
 	bool keep_index = vm.count("soft");
@@ -827,5 +837,5 @@ void cmd_reset(int argc, char* argv[])
 
 void cmd_test(int argc, char* argv[])
 {
-	Filesystem::create_directory("C:\\Program Files\\mydir");
+
 }

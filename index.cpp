@@ -149,7 +149,9 @@ void read_tree_into_index(std::ostream& out_stream, const std::string& tree_id)
 	while (*tree_reader >> record)
 	{
 		if (record.kind == "blob")
-			out_stream << IndexRecord(record.id, record.path, 0, record.mode) << '\n';
+		{
+			out_stream << IndexRecord(record.id, record.path, get_time_t_now(), record.mode) << '\n';
+		}
 		else
 			read_tree_into_index(out_stream, record.id);
 	}

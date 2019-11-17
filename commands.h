@@ -15,4 +15,5 @@ void cmd_cat_file(int argc, char* argv[]);
 void cmd_ls_files(int argc, char* argv[]);
 void cmd_config(int argc, char* argv[]);
 void cmd_diff(int argc, char* argv[]);
-void cmd_test(int argc, char* argv[]);void cmd_reset(int argc, char* argv[]);
+void cmd_test(int argc, char* argv[]);
+void cmd_reset(int argc, char* argv[]);
