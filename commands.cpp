@@ -215,7 +215,11 @@ void cmd_commit(int argc, char* argv[])
 	if (Globals::Config.find("user.name") == Globals::Config.end())
 		throw Exception("user name not defined");
 
-	std::string tree_id = write_tree(); // TODO: check if anything changed
+	std::string curr_tree_id = Object(resolve_head()).get_commit_reader()->read_commit().tree_id;
+	std::string tree_id = write_tree();
+
+	if (curr_tree_id == tree_id)
+		message("no changes added to commit");
 
 	Commit commit;
 	commit.tree_id = tree_id;

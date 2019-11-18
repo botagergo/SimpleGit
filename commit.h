@@ -18,7 +18,8 @@ class CommitReader : public ObjectReader
 	friend class Object;
 
 public:
-	virtual std::ostream& pretty_print(std::ostream& out_stream) override;
+	virtual std::ostream&	pretty_print(std::ostream& out_stream) override;
+	Commit					read_commit();
 
 	CommitReader& operator>>(Commit& commit);
 

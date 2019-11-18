@@ -52,6 +52,13 @@ CommitReader& CommitReader::operator>>(Commit& commit)
 	return *this;
 }
 
+Commit CommitReader::read_commit()
+{
+	Commit commit;
+	*this >> commit;
+	return commit;
+}
+
 std::string write_commit(const Commit& commit)
 {
 	ObjectWriter writer("commit");
