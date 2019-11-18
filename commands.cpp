@@ -104,7 +104,7 @@ void cmd_init(int argc, char* argv[])
 	if (!fs::exists(Globals::SimpleGitDir))
 	{
 		init_filesystem();
-		message("initialized empty git repository in " + fs::absolute(Globals::SimpleGitDir).string());
+		std::cout << "initialized empty git repository in " + fs::absolute(Globals::SimpleGitDir).string() << '\n';
 	}
 	else
 		error("git repository already exists: " + fs::absolute(Globals::SimpleGitDir).string());
@@ -254,18 +254,18 @@ void cmd_commit(int argc, char* argv[])
 	if (!root_commit && not_detached)
 	{
 		write_branch(head, commit_id, Filesystem::FILE_FLAG_OVERWRITE);
-		message(boost::format("[%1% %2%] %3%") % head % commit_id % one_line_commit_message);
+		std::cout << boost::format("[%1% %2%] %3%") % head % commit_id % one_line_commit_message << '\n';
 	}
 	else if (root_commit)
 	{
 		write_branch("master", commit_id, Filesystem::FILE_FLAG_OVERWRITE);
 		write_head("master");
-		message(boost::format("[master (root-commit) %1%] %2%") % commit_id % one_line_commit_message);
+		std::cout << boost::format("[master (root-commit) %1%] %2%") % commit_id % one_line_commit_message << '\n';
 	}
 	else if (!not_detached)
 	{
 		write_head(commit_id);
-		message(boost::format("[detached HEAD %1%] %2%") % commit_id % one_line_commit_message);
+		std::cout << boost::format("[detached HEAD %1%] %2%") % commit_id % one_line_commit_message << '\n';
 	}
 }
 
@@ -430,7 +430,7 @@ void cmd_write_tree(int argc, char* argv[])
 	fs::path prefix = vm.count("prefix") ? vm["prefix"].as<fs::path>() : "";
 	bool ignore_missing = vm.count("missing-ok");
 
-	message(write_tree(prefix, ignore_missing));
+	std::cout << write_tree(prefix, ignore_missing) << '\n';
 }
 
 void cmd_branch(int argc, char* argv[])
@@ -649,9 +649,9 @@ void cmd_cat_file(int argc, char* argv[])
 	const std::string object_id = resolve_ref(vm["object"].as<std::string>());
 
 	if (vm.count("-t"))
-		message(Object(object_id).kind());
+		std::cout << Object(object_id).kind() << '\n';
 	else if (vm.count("-s"))
-		message(Object(object_id).size());
+		std::cout << Object(object_id).size() << '\n';
 	else if (vm.count("-p"))
 		Object(object_id).get_reader()->pretty_print(std::cout);
 }

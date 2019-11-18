@@ -37,6 +37,6 @@ void list_tags()
 
 	for (const fs::path tag : fs::directory_iterator(Globals::TagDir))
 	{
-		message(tag.filename().string());
+		std::cout << tag.filename().string() << '\n';
 	}
 }

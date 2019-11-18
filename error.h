@@ -23,6 +23,7 @@ inline void error(const std::string &msg)
 inline void message(const char* fmt...)
 {
 	printf(fmt);
+	exit(0);
 }
 
 inline void message(const std::string& msg)

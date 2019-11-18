@@ -84,6 +84,6 @@ void list_branches()
 
 	for (const fs::path branch : fs::directory_iterator(Globals::BranchDir))
 	{
-		message(branch.filename().string());
+		std::cout << branch.filename().string() << '\n';
 	}
 }
