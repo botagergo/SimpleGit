@@ -30,6 +30,8 @@ namespace Globals
 	extern const size_t		MaxObjectHeaderSize;
 
 	extern bool				Debug;
+	extern bool				Verbose;
+
 	extern fs::path			ExecutableDir;
 
 	extern std::string		EditorCommand;

@@ -11,6 +11,16 @@
 #include "tree.h"
 #include "two_tree_iterator.h"
 
+bool has_diff(const IndexRecord& record)
+{
+	if (!fs::exists(record.path))
+		return true;
+	else if (record.mtime == Filesystem::get_stat(record.path).st_mtime)
+		return false;
+	else
+		return Diff(Object(record.id).get_blob_reader()->read_lines(), Filesystem::read_lines(record.path)).calculate();
+}
+
 void diff_tree(const std::string& tree1_id, const std::string& tree2_id)
 {
 	auto tree1Reader = Object(tree1_id).get_tree_reader();

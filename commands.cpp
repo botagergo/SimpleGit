@@ -68,13 +68,16 @@ void init_filesystem()
 }
 
 // initializes stuff that are needed for the actual repository commands
-void init_for_git_commands()
+void init_for_git_commands(const po::variables_map& vm)
 {
 	Globals::Config = read_config(Globals::ConfigFile);
 	if (Globals::Config.find("debug") != Globals::Config.end())
 		Globals::Debug = true;
 	else
 		Globals::Debug = false;
+
+	if (vm.count("verbose"))
+		Globals::Verbose = true;
 }
 
 void cmd_init(int argc, char* argv[])
@@ -135,7 +138,7 @@ void cmd_add(int argc, char* argv[])
 		return;
 	}
 
-	init_for_git_commands();
+	init_for_git_commands(vm);
 
 	if (!vm.count("files"))
 		message("nothing specified, nothing added");
@@ -174,7 +177,7 @@ void cmd_update_index(int argc, char* argv[])
 		return;
 	}
 
-	init_for_git_commands();
+	init_for_git_commands(vm);
 
 	int flags = UPDATE_INDEX_MODIFY;
 
@@ -197,6 +200,7 @@ void cmd_commit(int argc, char* argv[])
 		("help,h", po::value<bool>()->implicit_value(true)->zero_tokens(), "prints command usage")
 		("message,m", po::value<std::string>(), "commit message")
 		("file,F", po::value<std::string>(), "commit message file")
+		("all,a", po::value<bool>()->implicit_value(true)->zero_tokens(), "stage modified and deleted files")
 		;
 
 	po::variables_map vm;
@@ -211,15 +215,43 @@ void cmd_commit(int argc, char* argv[])
 		return;
 	}
 
-	init_for_git_commands();
+	init_for_git_commands(vm);
 	if (Globals::Config.find("user.name") == Globals::Config.end())
 		throw Exception("user name not defined");
 
-	std::string curr_tree_id = Object(resolve_head()).get_commit_reader()->read_commit().tree_id;
-	std::string tree_id = write_tree();
+	if (vm.count("all") && fs::exists(Globals::IndexFile))
+	{
+		std::ifstream index_in;
+		Filesystem::open(Globals::IndexFile, index_in);
+		IndexRecord record;
+		std::vector<fs::path> files_to_add;
 
-	if (curr_tree_id == tree_id)
-		message("no changes added to commit");
+		while (index_in >> record)
+		{
+			if (has_diff(record))
+				files_to_add.push_back(record.path);
+		}
+
+		if (files_to_add.size())
+			update_index(files_to_add, UPDATE_INDEX_MODIFY | UPDATE_INDEX_REMOVE_IF_DELETED);
+	}
+
+	if (IndexReader(Globals::IndexFile).end())
+	{
+		std::cout << "no changes added to commit" << '\n';
+		return;
+	}
+
+	std::string tree_id = write_tree();
+	bool head_exists = fs::exists(Globals::HeadFile);
+
+	// check if there have been any changes
+	// TODO: rewrite it using diff
+	if (head_exists && Object(resolve_head()).get_commit_reader()->read_commit().tree_id == tree_id)
+	{
+		std::cout << "no changes added to commit" << '\n';
+		return;
+	}
 
 	Commit commit;
 	commit.tree_id = tree_id;
@@ -239,11 +271,10 @@ void cmd_commit(int argc, char* argv[])
 	std::string one_line_commit_message = commit.message;
 	std::replace(one_line_commit_message.begin(), one_line_commit_message.end(), '\n', ' ');
 
-	bool root_commit = !fs::exists(Globals::HeadFile);
 	bool not_detached = true;
 	std::string head;
 
-	if (!root_commit)
+	if (head_exists)
 	{
 		head = Filesystem::read_content(Globals::HeadFile);
 		not_detached = is_branch(head);
@@ -255,12 +286,12 @@ void cmd_commit(int argc, char* argv[])
 
 	std::string commit_id = write_commit(commit);
 
-	if (!root_commit && not_detached)
+	if (head_exists && not_detached)
 	{
 		write_branch(head, commit_id, Filesystem::FILE_FLAG_OVERWRITE);
 		std::cout << boost::format("[%1% %2%] %3%") % head % commit_id % one_line_commit_message << '\n';
 	}
-	else if (root_commit)
+	else if (!head_exists)
 	{
 		write_branch("master", commit_id, Filesystem::FILE_FLAG_OVERWRITE);
 		write_head("master");
@@ -342,7 +373,7 @@ void cmd_tag(int argc, char* argv[])
 		return;
 	}
 
-	init_for_git_commands();
+	init_for_git_commands(vm);
 
 	if (vm.count("list"))
 	{
@@ -385,7 +416,7 @@ void cmd_read_tree(int argc, char* argv[])
 		return;
 	}
 
-	init_for_git_commands();
+	init_for_git_commands(vm);
 
 	if (!vm.count("tree-ish"))
 		error("expected tree id");
@@ -429,7 +460,7 @@ void cmd_write_tree(int argc, char* argv[])
 		return;
 	}
 
-	init_for_git_commands();
+	init_for_git_commands(vm);
 
 	fs::path prefix = vm.count("prefix") ? vm["prefix"].as<fs::path>() : "";
 	bool ignore_missing = vm.count("missing-ok");
@@ -544,7 +575,7 @@ void cmd_branch(int argc, char* argv[])
 		return;
 	}
 
-	init_for_git_commands();
+	init_for_git_commands(vm);
 
 	int flags = vm.count("force") ? Filesystem::FILE_FLAG_OVERWRITE : 0;
 
@@ -600,7 +631,7 @@ void cmd_checkout(int argc, char* argv[])
 		return;
 	}
 
-	init_for_git_commands();
+	init_for_git_commands(vm);
 
 	if (!vm.count("commit-id"))
 		error("expected commit id");
@@ -648,7 +679,7 @@ void cmd_cat_file(int argc, char* argv[])
 
 	at_least_one_required(vm, { "-t", "-p", "-s"});
 
-	init_for_git_commands();
+	init_for_git_commands(vm);
 
 	const std::string object_id = resolve_ref(vm["object"].as<std::string>());
 
@@ -681,7 +712,7 @@ void cmd_ls_files(int argc, char* argv[])
 		return;
 	}
 
-	init_for_git_commands();
+	init_for_git_commands(vm);
 
 	if (!fs::exists(Globals::IndexFile))
 		return;
@@ -720,7 +751,7 @@ void cmd_config(int argc, char* argv[])
 		return;
 	}
 
-	init_for_git_commands();
+	init_for_git_commands(vm);
 
 	write_config(Globals::ConfigFile, vm["name"].as<std::string>(), vm["value"].as<std::string>());
 }
@@ -763,7 +794,7 @@ void cmd_diff(int argc, char* argv[])
 
 	po::notify(vm);
 
-	init_for_git_commands();
+	init_for_git_commands(vm);
 
 	// if the index file doesn't exist, we have nothing to do
 	if (!fs::exists(Globals::IndexFile))
@@ -837,7 +868,7 @@ void cmd_reset(int argc, char* argv[])
 		return;
 	}
 
-	init_for_git_commands();
+	init_for_git_commands(vm);
 
 	std::string commit_id = resolve_to_commit(vm["commit"].as<std::string>());
 

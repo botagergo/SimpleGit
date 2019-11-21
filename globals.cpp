@@ -27,6 +27,8 @@ namespace Globals
 	const size_t		MaxObjectHeaderSize = 32;
 
 	bool				Debug = false;
+	bool				Verbose = false;
+
 	fs::path			ExecutableDir;
 
 	std::string			EditorCommand;

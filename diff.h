@@ -2,6 +2,8 @@
 
 #include "dtl/dtl/dtl.hpp"
 
+class IndexRecord;
+
 class Diff
 {
 public:
@@ -23,6 +25,10 @@ public:
 private:
 	dtl::Diff<std::string, std::vector<std::string>> d;
 };
+
+// returns true if the path in the record doesn't exist 
+// or the content of the path is different from the object in the record
+bool		has_diff(const IndexRecord& record);
 
 void		diff_tree(const std::string& tree1_id, const std::string& tree2_id);
 void		diff_index(const fs::path& index_file, const std::vector<fs::path>& files);
