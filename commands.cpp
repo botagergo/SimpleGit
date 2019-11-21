@@ -37,6 +37,14 @@ void conflicting_options(const po::variables_map& vm,
 			+ opt1 + "' and '" + opt2 + "'.");
 }
 
+void conflicting_options(const po::variables_map& vm,
+	const char* opt1, const char* opt2, const char* opt3)
+{
+	conflicting_options(vm, opt1, opt2);
+	conflicting_options(vm, opt1, opt3);
+	conflicting_options(vm, opt2, opt3);
+}
+
 void option_dependency(const po::variables_map& vm,
 	const char* for_what, const char* required_option)
 {
@@ -201,6 +209,7 @@ void cmd_commit(int argc, char* argv[])
 		("message,m", po::value<std::string>(), "commit message")
 		("file,F", po::value<std::string>(), "commit message file")
 		("all,a", po::value<bool>()->implicit_value(true)->zero_tokens(), "stage modified and deleted files")
+		("reuse-message,C", po::value<std::string>())
 		;
 
 	po::variables_map vm;
@@ -214,6 +223,8 @@ void cmd_commit(int argc, char* argv[])
 		std::cout << desc << std::endl;
 		return;
 	}
+
+	conflicting_options(vm, "reuse-message", "message", "file");
 
 	init_for_git_commands(vm);
 	if (Globals::Config.find("user.name") == Globals::Config.end())
@@ -254,16 +265,23 @@ void cmd_commit(int argc, char* argv[])
 	}
 
 	Commit commit;
-	commit.tree_id = tree_id;
-	commit.committer = Globals::Config["user.name"];
-	commit.author = Globals::Config["user.name"];
 
-	if (vm.count("message"))
-		commit.message = vm["message"].as<std::string>();
-	else if (vm.count("file"))
-		commit.message = Filesystem::read_content(vm["file"].as<std::string>());
+	if (vm.count("reuse-message"))
+		commit = Object(resolve_to_commit(vm["reuse-message"].as<std::string>())).get_commit_reader()->read_commit();
 	else
-		commit.message = get_commit_message();
+	{
+		commit.committer = Globals::Config["user.name"];
+		commit.author = Globals::Config["user.name"];
+
+		if (vm.count("message"))
+			commit.message = vm["message"].as<std::string>();
+		else if (vm.count("file"))
+			commit.message = Filesystem::read_content(vm["file"].as<std::string>());
+		else
+			commit.message = get_commit_message();
+	}
+
+	commit.tree_id = tree_id;
 
 	if (commit.message.empty())
 		throw Exception("Aborting commit due to empty commit message.");
@@ -673,10 +691,7 @@ void cmd_cat_file(int argc, char* argv[])
 		return;
 	}
 
-	conflicting_options(vm, "-t", "-p");
-	conflicting_options(vm, "-t", "-s");
-	conflicting_options(vm, "-p", "-s");
-
+	conflicting_options(vm, "-t", "-s", "-p");
 	at_least_one_required(vm, { "-t", "-p", "-s"});
 
 	init_for_git_commands(vm);
