@@ -19,7 +19,6 @@
 #include "ref.h"
 #include "tag.h"
 
-//#define TEST
 //#define WAIT_FOR_ENTER
 
 std::map<std::string, void (*)(int argc, char* argv[])> command_map {

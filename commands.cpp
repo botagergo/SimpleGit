@@ -227,8 +227,13 @@ void cmd_commit(int argc, char* argv[])
 	conflicting_options(vm, "reuse-message", "message", "file");
 
 	init_for_git_commands(vm);
+
 	if (Globals::Config.find("user.name") == Globals::Config.end())
 		throw Exception("user name not defined");
+
+	// can't commit if index is empty
+	if (IndexReader(Globals::IndexFile).end())
+		throw Exception("no changes added to commit");
 
 	if (vm.count("all") && fs::exists(Globals::IndexFile))
 	{
@@ -245,23 +250,6 @@ void cmd_commit(int argc, char* argv[])
 
 		if (files_to_add.size())
 			update_index(files_to_add, UPDATE_INDEX_MODIFY | UPDATE_INDEX_REMOVE_IF_DELETED);
-	}
-
-	if (IndexReader(Globals::IndexFile).end())
-	{
-		std::cout << "no changes added to commit" << '\n';
-		return;
-	}
-
-	std::string tree_id = write_tree();
-	bool head_exists = fs::exists(Globals::HeadFile);
-
-	// check if there have been any changes
-	// TODO: rewrite it using diff
-	if (head_exists && Object(resolve_head()).get_commit_reader()->read_commit().tree_id == tree_id)
-	{
-		std::cout << "no changes added to commit" << '\n';
-		return;
 	}
 
 	Commit commit;
@@ -281,10 +269,17 @@ void cmd_commit(int argc, char* argv[])
 			commit.message = get_commit_message();
 	}
 
-	commit.tree_id = tree_id;
-
 	if (commit.message.empty())
 		throw Exception("Aborting commit due to empty commit message.");
+
+	commit.tree_id = write_tree();
+
+	bool head_exists = fs::exists(Globals::HeadFile);
+
+	// check if there have been any changes
+	// TODO: rewrite it using diff
+	if (head_exists && Object(resolve_head()).get_commit_reader()->read_commit().tree_id == commit.tree_id)
+		throw Exception("no changes added to commit");
 
 	std::string one_line_commit_message = commit.message;
 	std::replace(one_line_commit_message.begin(), one_line_commit_message.end(), '\n', ' ');
