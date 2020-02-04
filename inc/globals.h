@@ -20,6 +20,7 @@ namespace Globals
 
 	extern fs::path			IndexFile;
 	extern fs::path			ConfigFile;
+	extern fs::path			GlobalConfigFile;
 	extern fs::path			HeadFile;
 
 	extern fs::path			CommitMessageTmpFile;

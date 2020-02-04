@@ -78,10 +78,25 @@ void init_filesystem()
 // initializes stuff that are needed for the actual repository commands
 void init_for_git_commands(const po::variables_map& vm)
 {
-	init_config();
+	Config::init();
 
 	if (vm.count("verbose"))
 		Globals::Verbose = true;
+}
+
+ArgType get_arg_type(const std::string& arg)
+{
+	if (try_resolve(arg))
+	{
+		if (fs::exists(arg))
+			throw AmbiguousArgumentException(arg);
+		else
+			return ArgType::Ref;
+	}
+	else if (fs::exists(arg))
+		return ArgType::Path;
+	else
+		throw InvalidArgumentException(arg);
 }
 
 void cmd_init(int argc, char* argv[])
@@ -224,12 +239,36 @@ void cmd_commit(int argc, char* argv[])
 
 	init_for_git_commands(vm);
 
-	if (Globals::Config.find("user.name") == Globals::Config.end())
-		throw Exception("user name not defined");
-
 	// can't commit if index is empty
 	if (IndexReader(Globals::IndexFile).end())
 		throw Exception("no changes added to commit");
+
+	Commit commit;
+
+	if (vm.count("reuse-message"))
+		commit = Object(resolve_to_commit(vm["reuse-message"].as<std::string>())).get_commit_reader()->read_commit();
+	else
+	{
+		try
+		{
+			commit.committer = UserInfo(Config::get("user.name"), Config::get("user.email"));
+			commit.author = commit.committer;
+		}
+		catch (const ConfigNotFoundException& e)
+		{
+			error("user name or email not configured");
+		}
+
+		if (vm.count("message"))
+			commit.message = vm["message"].as<std::string>();
+		else if (vm.count("file"))
+			commit.message = Filesystem::read_content(vm["file"].as<std::string>());
+		else
+			commit.message = get_commit_message();
+	}
+
+	if (commit.message.empty())
+		throw Exception("Aborting commit due to empty commit message.");
 
 	if (vm.count("all") && fs::exists(Globals::IndexFile))
 	{
@@ -247,26 +286,6 @@ void cmd_commit(int argc, char* argv[])
 		if (files_to_add.size())
 			update_index(files_to_add, UPDATE_INDEX_MODIFY | UPDATE_INDEX_REMOVE_IF_DELETED);
 	}
-
-	Commit commit;
-
-	if (vm.count("reuse-message"))
-		commit = Object(resolve_to_commit(vm["reuse-message"].as<std::string>())).get_commit_reader()->read_commit();
-	else
-	{
-		commit.committer = Globals::Config["user.name"];
-		commit.author = Globals::Config["user.name"];
-
-		if (vm.count("message"))
-			commit.message = vm["message"].as<std::string>();
-		else if (vm.count("file"))
-			commit.message = Filesystem::read_content(vm["file"].as<std::string>());
-		else
-			commit.message = get_commit_message();
-	}
-
-	if (commit.message.empty())
-		throw Exception("Aborting commit due to empty commit message.");
 
 	commit.tree_id = write_tree();
 
@@ -759,7 +778,7 @@ void cmd_config(int argc, char* argv[])
 
 	init_for_git_commands(vm);
 
-	write_config(Globals::ConfigFile, vm["name"].as<std::string>(), vm["value"].as<std::string>());
+	Config::write(Globals::ConfigFile, vm["name"].as<std::string>(), vm["value"].as<std::string>());
 }
 
 void cmd_diff(int argc, char* argv[])
@@ -773,24 +792,6 @@ void cmd_diff(int argc, char* argv[])
 		("args", po::value<std::vector<std::string>>())
 		;
 
-	po::positional_options_description pos_blob;
-	pos_blob.add("blob", 2);
-
-	po::options_description desc_blob;
-	desc_blob.add_options()
-		("help,h", po::value<bool>()->implicit_value(true)->zero_tokens(), "prints command usage")
-		("blob", po::value<std::vector<std::string>>())
-		;
-	
-	po::positional_options_description pos_treeish;
-	pos_treeish.add("tree-ish", 2);
-
-	po::options_description desc_treeish;
-	desc_treeish.add_options()
-		("help,h", po::value<bool>()->implicit_value(true)->zero_tokens(), "prints command usage")
-		("tree-ish", po::value<std::vector<std::string>>()->required())
-		;
-
 	po::variables_map vm;
 	po::store(po::basic_command_line_parser<char>(argc, argv)
 		.options(desc)
@@ -802,41 +803,41 @@ void cmd_diff(int argc, char* argv[])
 
 	init_for_git_commands(vm);
 
-	// if the index file doesn't exist, we have nothing to do
-	if (!fs::exists(Globals::IndexFile))
-		return;
-
 	std::vector<std::string> args = vm.count("args") ? vm["args"].as<std::vector<std::string>>() : std::vector<std::string>();
-	if (args.size() == 2)
+	std::vector<std::string> refs, paths;
+	auto sep = std::find(args.begin(), args.end(), "--");
+
+	if (sep != args.end())
 	{
-		std::string id1, id2;
-		if (try_resolve_to_blob(args[0], id1) && try_resolve_to_blob(args[1], id2))
-		{
-			po::variables_map vm;
-			po::store(po::basic_command_line_parser<char>(argc, argv)
-				.options(desc_blob)
-				.positional(pos_blob).run(), vm);
-			po::notify(vm);
-
-
-			Diff d(Object(id1).get_blob_reader()->read_lines(),
-				Object(id2).get_blob_reader()->read_lines());
-
-			d.calculate();
-			d.print();
-		}
-		else if (try_resolve_to_tree(args[0], id1) && try_resolve_to_tree(args[1], id2))
-		{
-			po::variables_map vm;
-			po::store(po::basic_command_line_parser<char>(argc, argv)
-				.options(desc_treeish)
-				.positional(pos_treeish).run(), vm);
-			po::notify(vm);
-
-			return diff_tree(id1, id2);
-		}
+		std::copy(args.begin(), sep, std::back_inserter(refs));
+		std::copy(sep + 1, args.end(), std::back_inserter(paths));
 	}
-	else if (std::all_of(args.begin(), args.end(), [](const fs::path& path) {return fs::exists(path); }))
+	else
+	{
+		int i;
+
+		for(i = 0; i < args.size() && get_arg_type(args[i]) == ArgType::Ref; i++)
+			refs.push_back(args[i]);
+
+		for(; i < args.size() && get_arg_type(args[i]) == ArgType::Path; i++)
+			paths.push_back(args[i]);
+
+		if (i < args.size())
+			throw InvalidArgumentException(args[i]);
+	}
+
+	std::string id1, id2;
+	if (refs.size() == 2 && try_resolve_to_tree(refs[0], id1) && try_resolve_to_tree(refs[1], id2))
+		return diff_tree(id1, id2);
+	else if (refs.size() == 2 && try_resolve_to_blob(refs[0], id1) && try_resolve_to_blob(refs[1], id2))
+	{
+		Diff d(Object(id1).get_blob_reader()->read_lines(),
+		Object(id2).get_blob_reader()->read_lines());
+
+		d.calculate();
+		d.print();
+	}
+	else if (refs.size() == 0 && paths.size() >= 1)
 		diff_index(Globals::IndexFile, std::vector<fs::path>(args.begin(), args.end()));
 	else
 		error("invalid combination of positional arguments");

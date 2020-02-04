@@ -27,6 +27,10 @@ std::string resolve_to_branch(const std::string& ref);
 // returns the current branch or the checked out commit, if the head is detached
 std::string resolve_head();
 
+// tries to resolve ref to an object, returns true on success
+bool        try_resolve(const std::string& ref, std::string& id);
+bool        try_resolve(const std::string& ref);
+
 // tries to resolve ref to a blob, returns true on success
 bool		try_resolve_to_blob(const std::string& ref, std::string& blob_id);
 bool		try_resolve_to_blob(const std::string& ref);

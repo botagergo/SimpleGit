@@ -11,6 +11,34 @@
 #include "helper.h"
 #include "object.h"
 
+std::ostream&	operator<<(std::ostream& out_stream, const UserInfo& user)
+{
+	out_stream << user.name << " <" << user.email << '>';
+}
+
+std::istream&	operator>>(std::istream& in_stream, UserInfo& user)
+{
+	in_stream >> user.name;
+	
+	while(in_stream && in_stream.get() != '<')
+		;
+
+	if (!in_stream)
+		throw Exception("invalid commit file format");
+
+	std::stringstream email;
+	char ch;
+	while (in_stream && (ch = in_stream.get()) != '>')
+		email << ch;
+
+	if (!in_stream)
+		throw Exception("invalid commit file format");
+
+	user.email = email.str();
+
+	return in_stream;
+}
+
 std::ostream& CommitReader::pretty_print(std::ostream& out_stream)
 {
 	Commit commit;
@@ -67,7 +95,7 @@ std::string write_commit(const Commit& commit)
 	for (const std::string& parent : commit.parents)
 		writer << "parent " << parent << '\n';
 	writer << "author " << commit.author << '\n';
-	writer << "committer " << commit.committer << "\n\n";
+	writer << "committer " << commit.author << "\n\n";
 	writer << commit.message;
 
 	return writer.save();

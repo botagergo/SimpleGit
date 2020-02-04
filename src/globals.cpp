@@ -14,6 +14,7 @@ namespace Globals
 	fs::path			BranchDir;
 
 	fs::path			ConfigFile;
+	fs::path			GlobalConfigFile;
 	fs::path			IndexFile;
 	fs::path			HeadFile;
 

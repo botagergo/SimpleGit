@@ -2,15 +2,27 @@
 
 #include "object.h"
 
+struct UserInfo
+{
+	UserInfo(const std::string& name, const std::string& email)
+		: name(name), email(email) {}
+	UserInfo() {}
+
+	std::string name;
+	std::string email;
+};
+
+std::ostream&	operator<<(std::ostream& out_stream, const UserInfo& user);
+
 struct Commit
 {
 	Commit() {}
 
-	std::string					tree_id;
-	std::vector<std::string>	parents;
-	std::string					author;
-	std::string					committer;
-	std::string					message;
+	std::string								tree_id;
+	std::vector<std::string>				parents;
+	UserInfo								author;
+	UserInfo								committer;
+	std::string								message;
 };
 
 class CommitReader : public ObjectReader

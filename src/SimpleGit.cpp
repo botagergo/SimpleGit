@@ -13,6 +13,7 @@
 #include "globals.h"
 #include "helper.h"
 #include "index.h"
+#include "linux.h"
 #include "ref.h"
 #include "tag.h"
 
@@ -63,6 +64,8 @@ void initPathConstants()
 		Globals::ConfigFile = Globals::SimpleGitDir / config;
 	else
 		Globals::ConfigFile = Globals::DefaultSimpleGitConfig;
+
+	Globals::GlobalConfigFile = get_home_directory() / ".sgitconfig";
 
 	Globals::ObjectDir = Globals::SimpleGitDir / "objects";
 	Globals::RefDir = Globals::SimpleGitDir / "refs";

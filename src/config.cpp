@@ -12,63 +12,88 @@
 
 #include "platform.h"
 
-std::map<std::string, std::string> read_config(const fs::path& config_file)
+namespace Config
 {
-	if (!fs::exists(config_file))
-		return {};
-
-	std::map<std::string, std::string> config;
-	std::fstream in_stream;
-
-	Filesystem::open(config_file, in_stream);
-	std::string line;
-	while (std::getline(in_stream, line))
+	void read(std::map<std::string, std::string>& config, const fs::path& config_file)
 	{
-		size_t mid = line.find_first_of('=');
+		std::fstream in_stream;
 
-		std::string left = line.substr(0, mid);
-		boost::algorithm::trim(left);
+		Filesystem::open(config_file, in_stream);
+		std::string line;
+		while (std::getline(in_stream, line))
+		{
+			size_t mid = line.find_first_of('=');
 
-		std::string right = line.substr(mid + 1);
-		boost::algorithm::trim(right);
+			std::string left = line.substr(0, mid);
+			boost::algorithm::trim(left);
 
-		if (left.size() == 0)
-			throw InvalidConfigFileFormatException(config_file);
+			std::string right = line.substr(mid + 1);
+			boost::algorithm::trim(right);
 
-		config.insert(std::make_pair(left, right));
+			if (left.size() == 0)
+				throw InvalidConfigFileFormatException(config_file);
+
+			config[left] = right;
+		}
 	}
 
-	return config;
-}
+	std::map<std::string, std::string> read(const fs::path& config_file)
+	{
+		std::map<std::string, std::string>  config;
+		read(config, config_file);
+		return config;
+	}
 
-void write_config(const fs::path& config_file, const std::map<std::string, std::string>& config)
-{
-	Filesystem::make_sure_file_exists(config_file);
+	void write(const fs::path& config_file, const std::map<std::string, std::string>& config)
+	{
+		Filesystem::make_sure_file_exists(config_file);
 
-	std::ofstream out_stream;
-	Filesystem::open(config_file, out_stream);
+		std::ofstream out_stream;
+		Filesystem::open(config_file, out_stream);
 
-	for (auto p : config)
-		out_stream << p.first << '=' << p.second << '\n';
-}
+		for (auto p : config)
+			out_stream << p.first << '=' << p.second << '\n';
+	}
 
-void write_config(const fs::path& config_file, const std::string& name, const std::string& value)
-{
-	Filesystem::make_sure_file_exists(config_file);
+	void write(const fs::path& config_file, const std::string& name, const std::string& value)
+	{
+		Filesystem::make_sure_file_exists(config_file);
 
-	auto config = read_config(config_file);
-	config[name] = value;
-	write_config(config_file, config);
-}
+		auto config = read(config_file);
+		config[name] = value;
+		write(config_file, config);
+	}
 
-void init_config()
-{
-	Globals::Config = read_config(Globals::ConfigFile);
-	if (Globals::Config.find("user.name") == Globals::Config.end())
-		Globals::Config["user.name"] = get_username();
+	void init()
+	{
+		Globals::Config.clear();
 
-	if (Globals::Config.find("debug") != Globals::Config.end())
-		Globals::Debug = true;
-	else
-		Globals::Debug = false;
+		if (fs::exists(Globals::GlobalConfigFile))
+			Config::read(Globals::Config, Globals::GlobalConfigFile);
+		if (fs::exists(Globals::ConfigFile))
+			Config::read(Globals::Config, Globals::ConfigFile);
+
+		if (Globals::Config.find("user.name") == Globals::Config.end())
+			Globals::Config["user.name"] = get_username();
+
+		if (Globals::Config.find("debug") != Globals::Config.end())
+			Globals::Debug = true;
+		else
+			Globals::Debug = false;
+	}
+
+	bool find(const std::string& name)
+	{
+		return Globals::Config.find(name) != Globals::Config.end();
+	}
+
+	std::string get(const std::string& name)
+	{
+		auto value = Globals::Config.find(name);
+		if (value != Globals::Config.end())
+			return value->second;
+		else
+			throw ConfigNotFoundException(name);
+		
+	}
 }

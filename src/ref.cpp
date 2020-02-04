@@ -131,6 +131,23 @@ std::string resolve_head()
 		return name;
 }
 
+bool try_resolve(const std::string& ref, std::string& id)
+{
+	try {
+		id = resolve_ref(ref);
+		return true;
+	}
+	catch (const std::exception&) {
+		return false;
+	}
+}
+
+bool try_resolve(const std::string& ref)
+{
+	std::string dummy;
+	return try_resolve(ref, dummy);
+}
+
 bool try_resolve_to_blob(const std::string& ref, std::string& blob_id)
 {
 	try {

@@ -11,6 +11,7 @@ inline void error(const char* fmt...)
 {
 	printf("error: ");
 	printf(fmt);
+	printf("\n");
 	exit(1);
 }
 

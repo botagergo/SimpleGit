@@ -147,7 +147,7 @@ TreeReader& TreeReader::operator>>(TreeRecord& record)
 	}
 
 	char mode[10];
-	scanf("%s", mode);
+	sscanf(_curr_pos, "%s", mode);
 	record.mode = mode;
 	_curr_pos += strlen(mode) + 1;
 	record.path = _curr_pos;

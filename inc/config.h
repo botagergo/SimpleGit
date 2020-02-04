@@ -2,9 +2,16 @@
 
 #include "defs.h"
 
-std::map<std::string, std::string> read_config(const fs::path& config_file);
+namespace Config
+{
+    void read(std::map<std::string, std::string>& config, const fs::path& config_file);
+    std::map<std::string, std::string> read(const fs::path& config_file);
 
-void write_config(const fs::path& config_file, const std::map<std::string, std::string>& config);
-void write_config(const fs::path& config_file, const std::string& name, const std::string& value);
+    void write(const fs::path& config_file, const std::map<std::string, std::string>& config);
+    void write(const fs::path& config_file, const std::string& name, const std::string& value);
 
-void init_config();
+    void init();
+
+    bool find(const std::string& name);
+    std::string get(const std::string& name);
+}

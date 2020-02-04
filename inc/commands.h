@@ -1,5 +1,11 @@
 #pragma once
 
+enum ArgType {Ref, Path};
+
+// determines if arg is a ref or a path
+// throws exception if neither or ambiguous
+ArgType get_arg_type(const std::string& arg);
+
 void cmd_init(int argc, char* argv[]);
 void cmd_add(int argc, char* argv[]);
 void cmd_update_index(int argc, char* argv[]);
