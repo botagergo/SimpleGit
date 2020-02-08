@@ -254,7 +254,7 @@ void cmd_commit(int argc, char* argv[])
 			commit.committer = UserInfo(Config::get("user.name"), Config::get("user.email"));
 			commit.author = commit.committer;
 		}
-		catch (const ConfigNotFoundException& e)
+		catch (const ConfigNotFoundException&)
 		{
 			error("user name or email not configured");
 		}

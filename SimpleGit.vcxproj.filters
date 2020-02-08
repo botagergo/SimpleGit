@@ -15,204 +15,135 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="SimpleGit.cpp">
+    <ClCompile Include="src\linux.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="helper.cpp">
+    <ClCompile Include="src\blob.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="ref.cpp">
+    <ClCompile Include="src\branch.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="tag.cpp">
+    <ClCompile Include="src\checkout.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="blob.cpp">
+    <ClCompile Include="src\commands.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="commit.cpp">
+    <ClCompile Include="src\commit.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="tree.cpp">
+    <ClCompile Include="src\config.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="globals.cpp">
+    <ClCompile Include="src\diff.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="index.cpp">
+    <ClCompile Include="src\filesystem.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="branch.cpp">
+    <ClCompile Include="src\globals.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="commands.cpp">
+    <ClCompile Include="src\helper.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="filesystem.cpp">
+    <ClCompile Include="src\index.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="config.cpp">
+    <ClCompile Include="src\merge.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="checkout.cpp">
+    <ClCompile Include="src\object.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="object.cpp">
+    <ClCompile Include="src\ref.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="merge.cpp">
+    <ClCompile Include="src\SimpleGit.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="zlib\adler32.c">
+    <ClCompile Include="src\tag.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="zlib\compress.c">
+    <ClCompile Include="src\tree.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="zlib\crc32.c">
+    <ClCompile Include="src\windows.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="zlib\deflate.c">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="zlib\gzclose.c">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="zlib\gzlib.c">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="zlib\gzread.c">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="zlib\gzwrite.c">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="zlib\infback.c">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="zlib\inffast.c">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="zlib\inflate.c">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="zlib\inftrees.c">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="zlib\trees.c">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="zlib\uncompr.c">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="zlib\zutil.c">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="sha1.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="diff.cpp">
+    <ClCompile Include="src\sha1.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="blob.h">
+    <ClInclude Include="inc\blob.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="tree.h">
+    <ClInclude Include="inc\branch.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="commit.h">
+    <ClInclude Include="inc\checkout.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="tag.h">
+    <ClInclude Include="inc\commands.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="ref.h">
+    <ClInclude Include="inc\commit.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="branch.h">
+    <ClInclude Include="inc\config.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="globals.h">
+    <ClInclude Include="inc\defs.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="helper.h">
+    <ClInclude Include="inc\diff.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="exception.h">
+    <ClInclude Include="inc\error.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="error.h">
+    <ClInclude Include="inc\exception.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="index.h">
+    <ClInclude Include="inc\filesystem.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="commands.h">
+    <ClInclude Include="inc\globals.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="filesystem.h">
+    <ClInclude Include="inc\helper.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="config.h">
+    <ClInclude Include="inc\index.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="checkout.h">
+    <ClInclude Include="inc\index_two_tree_iterator.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="object.h">
+    <ClInclude Include="inc\merge.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="merge.h">
+    <ClInclude Include="inc\object.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="index_two_tree_iterator.h">
+    <ClInclude Include="inc\ref.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="zlib\crc32.h">
+    <ClInclude Include="inc\tag.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="zlib\deflate.h">
+    <ClInclude Include="inc\tree.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="zlib\gzguts.h">
+    <ClInclude Include="inc\two_tree_iterator.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="zlib\inffast.h">
+    <ClInclude Include="inc\sha1.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="zlib\inffixed.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="zlib\inflate.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="zlib\inftrees.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="zlib\trees.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="zlib\zconf.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="zlib\zlib.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="zlib\zutil.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="sha1.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="defs.h">
-      <Filter>Source Files</Filter>
-    </ClInclude>
-    <ClInclude Include="diff.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="two_tree_iterator.h">
+    <ClInclude Include="inc\platform.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

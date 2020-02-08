@@ -16,13 +16,6 @@ namespace Filesystem
 		boost::filesystem::permissions(path, perms::remove_perms | perms::owner_write | perms::group_write | perms::others_write);
 	}
 
-	void set_hidden(const fs::path& path)
-	{
-		#if defined(WIN32) || defined(_WIN32) || defined(__WIN32) && !defined(__CYGWIN__)
-		#include <windows.h>
-		SetFileAttributes(dir.c_str(), FILE_ATTRIBUTE_HIDDEN);
-		#endif
-	}
 
 	void create_directory(const fs::path &dir, int flags)
 	{

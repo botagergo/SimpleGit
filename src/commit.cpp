@@ -14,6 +14,7 @@
 std::ostream&	operator<<(std::ostream& out_stream, const UserInfo& user)
 {
 	out_stream << user.name << " <" << user.email << '>';
+	return out_stream;
 }
 
 std::istream&	operator>>(std::istream& in_stream, UserInfo& user)

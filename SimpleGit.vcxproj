@@ -75,14 +75,17 @@
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <LinkIncremental>true</LinkIncremental>
-    <LibraryPath>C:\Program Files\Boost\boost_1_71_0\stage\lib;$(LibraryPath)</LibraryPath>
+    <LibraryPath>C:\Program Files\Boost\boost_1_71_0\stage\lib;C:\Program Files\zlib\debug\lib;$(LibraryPath)</LibraryPath>
     <TargetName>sgit</TargetName>
+    <IncludePath>C:\Program Files\zlib\debug\include;$(SolutionDir)inc;$(IncludePath)</IncludePath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <LinkIncremental>false</LinkIncremental>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <LinkIncremental>false</LinkIncremental>
+    <LibraryPath>C:\Program Files\Boost\boost_1_71_0\stage\lib;C:\Program Files\Boost\boost_1_71_0\stage\lib;C:\Program Files\zlib\release\lib;$(LibraryPath)</LibraryPath>
+    <IncludePath>C:\Program Files\zlib\release\include;$(SolutionDir)inc;$(IncludePath)</IncludePath>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>
@@ -108,14 +111,14 @@
       <PreprocessorDefinitions>_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpp17</LanguageStandard>
-      <AdditionalIncludeDirectories>$(SolutionDir)termcolor\include\;C:\Program Files\boost\boost_1_71_0;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>C:\Program Files\boost\boost_1_71_0;C:\Program Files\boost\boost_1_71_0;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <AdditionalOptions>/D _SILENCE_CXX17_CODECVT_HEADER_DEPRECATION_WARNING /D _CRT_SECURE_NO_WARNINGS %(AdditionalOptions)</AdditionalOptions>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalDependencies>setargv.obj;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>setargv.obj;zlib.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
     <PostBuildEvent>
       <Command>xcopy "$(ProjectDir)\x64\Debug\$(TargetFileName)" "C:\Program Files\SimpleGit\" /s /i /y</Command>
@@ -151,83 +154,64 @@
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
+      <AdditionalIncludeDirectories>C:\Program Files\boost\boost_1_71_0;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalOptions>/D _SILENCE_CXX17_CODECVT_HEADER_DEPRECATION_WARNING /D _CRT_SECURE_NO_WARNINGS %(AdditionalOptions)</AdditionalOptions>
+      <MultiProcessorCompilation>true</MultiProcessorCompilation>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
       <GenerateDebugInformation>true</GenerateDebugInformation>
+      <AdditionalDependencies>zlib.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="blob.cpp" />
-    <ClCompile Include="branch.cpp" />
-    <ClCompile Include="checkout.cpp" />
-    <ClCompile Include="commands.cpp" />
-    <ClCompile Include="commit.cpp" />
-    <ClCompile Include="config.cpp" />
-    <ClCompile Include="diff.cpp" />
-    <ClCompile Include="filesystem.cpp" />
-    <ClCompile Include="globals.cpp" />
-    <ClCompile Include="helper.cpp" />
-    <ClCompile Include="index.cpp" />
-    <ClCompile Include="merge.cpp" />
-    <ClCompile Include="object.cpp" />
-    <ClCompile Include="ref.cpp" />
-    <ClCompile Include="sha1.cpp" />
-    <ClCompile Include="SimpleGit.cpp" />
-    <ClCompile Include="tag.cpp" />
-    <ClCompile Include="tree.cpp" />
-    <ClCompile Include="zlib\adler32.c" />
-    <ClCompile Include="zlib\compress.c" />
-    <ClCompile Include="zlib\crc32.c" />
-    <ClCompile Include="zlib\deflate.c" />
-    <ClCompile Include="zlib\gzclose.c" />
-    <ClCompile Include="zlib\gzlib.c" />
-    <ClCompile Include="zlib\gzread.c" />
-    <ClCompile Include="zlib\gzwrite.c" />
-    <ClCompile Include="zlib\infback.c" />
-    <ClCompile Include="zlib\inffast.c" />
-    <ClCompile Include="zlib\inflate.c" />
-    <ClCompile Include="zlib\inftrees.c" />
-    <ClCompile Include="zlib\trees.c" />
-    <ClCompile Include="zlib\uncompr.c" />
-    <ClCompile Include="zlib\zutil.c" />
+    <ClCompile Include="src\sha1.cpp" />
+    <ClCompile Include="src\blob.cpp" />
+    <ClCompile Include="src\branch.cpp" />
+    <ClCompile Include="src\checkout.cpp" />
+    <ClCompile Include="src\commands.cpp" />
+    <ClCompile Include="src\commit.cpp" />
+    <ClCompile Include="src\config.cpp" />
+    <ClCompile Include="src\diff.cpp" />
+    <ClCompile Include="src\filesystem.cpp" />
+    <ClCompile Include="src\globals.cpp" />
+    <ClCompile Include="src\helper.cpp" />
+    <ClCompile Include="src\index.cpp" />
+    <ClCompile Include="src\merge.cpp" />
+    <ClCompile Include="src\object.cpp" />
+    <ClCompile Include="src\ref.cpp" />
+    <ClCompile Include="src\SimpleGit.cpp" />
+    <ClCompile Include="src\linux.cpp" />
+    <ClCompile Include="src\tag.cpp" />
+    <ClCompile Include="src\tree.cpp" />
+    <ClCompile Include="src\windows.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="blob.h" />
-    <ClInclude Include="branch.h" />
-    <ClInclude Include="checkout.h" />
-    <ClInclude Include="commands.h" />
-    <ClInclude Include="commit.h" />
-    <ClInclude Include="config.h" />
-    <ClInclude Include="defs.h" />
-    <ClInclude Include="diff.h" />
-    <ClInclude Include="error.h" />
-    <ClInclude Include="exception.h" />
-    <ClInclude Include="filesystem.h" />
-    <ClInclude Include="globals.h" />
-    <ClInclude Include="helper.h" />
-    <ClInclude Include="index.h" />
-    <ClInclude Include="index_two_tree_iterator.h" />
-    <ClInclude Include="merge.h" />
-    <ClInclude Include="object.h" />
-    <ClInclude Include="ref.h" />
-    <ClInclude Include="sha1.h" />
-    <ClInclude Include="tag.h" />
-    <ClInclude Include="tree.h" />
-    <ClInclude Include="two_tree_iterator.h" />
-    <ClInclude Include="zlib\crc32.h" />
-    <ClInclude Include="zlib\deflate.h" />
-    <ClInclude Include="zlib\gzguts.h" />
-    <ClInclude Include="zlib\inffast.h" />
-    <ClInclude Include="zlib\inffixed.h" />
-    <ClInclude Include="zlib\inflate.h" />
-    <ClInclude Include="zlib\inftrees.h" />
-    <ClInclude Include="zlib\trees.h" />
-    <ClInclude Include="zlib\zconf.h" />
-    <ClInclude Include="zlib\zlib.h" />
-    <ClInclude Include="zlib\zutil.h" />
+    <ClInclude Include="inc\platform.h" />
+    <ClInclude Include="inc\sha1.h" />
+    <ClInclude Include="inc\blob.h" />
+    <ClInclude Include="inc\branch.h" />
+    <ClInclude Include="inc\checkout.h" />
+    <ClInclude Include="inc\commands.h" />
+    <ClInclude Include="inc\commit.h" />
+    <ClInclude Include="inc\config.h" />
+    <ClInclude Include="inc\defs.h" />
+    <ClInclude Include="inc\diff.h" />
+    <ClInclude Include="inc\error.h" />
+    <ClInclude Include="inc\exception.h" />
+    <ClInclude Include="inc\filesystem.h" />
+    <ClInclude Include="inc\globals.h" />
+    <ClInclude Include="inc\helper.h" />
+    <ClInclude Include="inc\index.h" />
+    <ClInclude Include="inc\index_two_tree_iterator.h" />
+    <ClInclude Include="inc\merge.h" />
+    <ClInclude Include="inc\object.h" />
+    <ClInclude Include="inc\ref.h" />
+    <ClInclude Include="inc\tag.h" />
+    <ClInclude Include="inc\tree.h" />
+    <ClInclude Include="inc\two_tree_iterator.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

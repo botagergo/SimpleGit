@@ -24,6 +24,8 @@ char hex_char_to_byte(char ch);
 
 time_t get_time_t_now();
 
+fs::path    get_home_directory();
+std::string get_username();
 std::string get_git_editor();
-
+std::string get_default_git_editor();
 std::string get_commit_message();

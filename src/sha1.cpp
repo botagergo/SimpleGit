@@ -18,7 +18,9 @@ A million repetitions of "a"
 /* #define LITTLE_ENDIAN * This should be #define'd already, if true. */
 /* #define SHA1HANDSOFF * Copies data before messing with it. */
 
-#define SHA1HANDSOFF
+#define SHA1HANDSOFF_
+
+#include "defs.h"
 
 #include <stdio.h>
 #include <string.h>
@@ -38,6 +40,10 @@ A million repetitions of "a"
 #define	LITTLE_ENDIAN	1234	/* least-significant byte first (vax, pc) */
 #define	BIG_ENDIAN	4321	/* most-significant byte first (IBM, net) */
 #define	PDP_ENDIAN	3412	/* LSB first in word, MSW first in long (pdp)*/
+
+#if defined(_M_AMD64)
+#define BYTE_ORDER LITTLE_ENDIAN
+#endif
 
 #if defined(vax) || defined(ns32000) || defined(sun386) || defined(__i386__) || \
     defined(MIPSEL) || defined(_MIPSEL) || defined(BIT_ZERO_ON_RIGHT) || \
@@ -102,13 +108,14 @@ A million repetitions of "a"
 
 /* Hash a single 512-bit block. This is the core of the algorithm. */
 
+typedef union {
+	unsigned char c[64];
+	u_int32_t l[16];
+} CHAR64LONG16;
+
 void SHA1Transform(u_int32_t state[5], const unsigned char buffer[64])
 {
 	u_int32_t a, b, c, d, e;
-	typedef union {
-		unsigned char c[64];
-		u_int32_t l[16];
-	} CHAR64LONG16;
 #ifdef SHA1HANDSOFF
 	CHAR64LONG16 block[1];  /* use array to appear as a pointer */
 	memcpy(block, buffer, 64);
@@ -118,7 +125,7 @@ void SHA1Transform(u_int32_t state[5], const unsigned char buffer[64])
 	 * And the result is written through.  I threw a "const" in, hoping
 	 * this will cause a diagnostic.
 	 */
-	CHAR64LONG16* block = (const CHAR64LONG16*)buffer;
+	CHAR64LONG16* block = (CHAR64LONG16*)buffer;
 #endif
 	/* Copy context->state[] to working vars */
 	a = state[0];

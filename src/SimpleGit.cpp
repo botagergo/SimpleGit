@@ -13,7 +13,6 @@
 #include "globals.h"
 #include "helper.h"
 #include "index.h"
-#include "linux.h"
 #include "ref.h"
 #include "tag.h"
 

@@ -2,7 +2,7 @@
 
 #include "dtl/dtl.hpp"
 
-class IndexRecord;
+struct IndexRecord;
 
 class Diff
 {

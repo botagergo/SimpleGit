@@ -11,33 +11,20 @@
 #include "tree.h"
 #include <zlib.h>
 
-#include "fcntl.h"
-#include "errno.h"
-#include "sys/mman.h"
 namespace fs = boost::filesystem;
+
+uint64_t create_file_map_read(const char* object_file, void** ptr);
+void create_file_map_write(const char* object_file, void** ptr, uint64_t fsize);
+void free_file_map(void* ptr, uint64_t size);
 
 ObjectData open_object(const char* object_file, bool header_only)
 {
 	ObjectData data;
-	#if 0
 	uLongf destLen;
 	Bytef header_buf[ObjectHeader::MaxHeaderSize];
 
-	HANDLE file = CreateFileA(object_file, GENERIC_READ, 0, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, 0);
-	if (file == INVALID_HANDLE_VALUE)
-		throw Exception(boost::format("cannot open file: %1%") % object_file);
-
-	HANDLE map = CreateFileMappingA(file, NULL, PAGE_READONLY, 0, 0, NULL);
-	if (map == NULL)
-		throw Exception("CreateFileMapping");
-
-	Bytef* ptr = (Bytef*)MapViewOfFile(map, FILE_MAP_READ, 0, 0, 0);
-	if (ptr == NULL)
-		throw Exception("MapViewOfFile");
-
-	LARGE_INTEGER l_fsize;
-	GetFileSizeEx(file, (PLARGE_INTEGER)& l_fsize);
-	uint64_t fsize = l_fsize.QuadPart;
+	Bytef* ptr;
+	uint64_t fsize = create_file_map_read(object_file, (void**)&ptr);
 
 	z_stream stream;
 
@@ -65,92 +52,21 @@ ObjectData open_object(const char* object_file, bool header_only)
 	data.buf[destLen] = 0;
 
 ret:
-	UnmapViewOfFile(ptr);
-	CloseHandle(file);
-
-#endif
-	uLongf destLen;
-	Bytef header_buf[ObjectHeader::MaxHeaderSize];
-
-	int fd = open(object_file, O_RDONLY);
-	if (fd == -1)
-		throw Exception(strerror(errno));
-
-	struct stat statbuf;
-	stat(object_file, &statbuf);
-	uint64_t fsize = statbuf.st_size;
-
-	Bytef* ptr = (Bytef*)mmap(NULL, fsize, PROT_READ, MAP_SHARED, fd, 0);
-	if (ptr == MAP_FAILED)
-		throw Exception(strerror(errno));
-
-	z_stream stream;
-
-	memset(&stream, Z_NULL, sizeof(z_stream));
-	stream.avail_in = (uInt)fsize;
-	stream.avail_out = ObjectHeader::MaxHeaderSize;
-	stream.next_in = ptr;
-	stream.next_out = header_buf;
-	inflateInit(&stream);
-	inflate(&stream, Z_NO_FLUSH);
-
-	int n = sscanf((char*)header_buf, "%s %ld\0", data.kind, &data.len);
-	assert(n == 2);
-
-	if (header_only)
-	{
-		data.buf = nullptr;
-		goto ret;
-	}
-
-	data.buf = new char[ObjectHeader::MaxHeaderSize + data.len + 1];
-	memset(data.buf, 0, ObjectHeader::MaxHeaderSize + data.len + 1);
-	destLen = (uInt)(ObjectHeader::MaxHeaderSize + data.len);
-	uncompress((Bytef*)data.buf, &destLen, ptr, (uLong)fsize);
-	data.buf[destLen] = 0;
-
-ret:
-	munmap(ptr, fsize);
-	close(fd);
+	free_file_map(ptr, fsize);
 	return data;
 }
 
 void write_object(const char* object_file, const char* buf, uint64_t len)
 {
-	#if 0
 	const uint64_t size = len * 2; //TODO change this
-	HANDLE file = CreateFileA(object_file, GENERIC_READ | GENERIC_WRITE, 0, NULL, CREATE_ALWAYS, 0, 0);
-	if (file == NULL)
-		throw Exception(boost::format("cannot create file: %1%") % object_file);
 
-	HANDLE map = CreateFileMappingA(file, NULL, PAGE_READWRITE, 0, size, NULL);
-	if (map == NULL)
-		throw Exception("CreateFileMapping");
-
-	Bytef* ptr = (Bytef*)MapViewOfFile(map, FILE_MAP_WRITE, 0, 0, size);
-	if (ptr == NULL)
-		throw Exception("MapViewOfFile");
+	Bytef* ptr;
+	create_file_map_write(object_file, (void**)&ptr, size);
 
 	uLongf ulen = 1000;
-	compress(ptr, &ulen, (Bytef*)buf, size);
-	UnmapViewOfFile(ptr);
-	CloseHandle(file);
-	#endif
+	compress(ptr, &ulen, (Bytef*)buf, (uLong)size);
 
-	const uint64_t size = len *12; //TODO change this
-	int fd = open(object_file, O_CREAT | O_RDWR, 0600);
-	if (fd == -1)
-		throw Exception(strerror(errno));
-
-	fallocate(fd, 0, 0, size);
-
-	void* addr = mmap(NULL, size, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
-	if (addr == MAP_FAILED)
-		throw Exception("mmap error");
-
-	compress((Bytef*)addr, &len, (Bytef*)buf, size);
-	munmap(addr, size);
-	close(fd);
+	free_file_map(ptr, size);
 }
 
 std::string ObjectWriter::save()

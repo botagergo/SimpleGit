@@ -19,7 +19,7 @@ std::string get_hash(const char* text, size_t size)
 	SHA1Init(&ctx);
 	unsigned char hash[20];
 
-	SHA1Update(&ctx, (const unsigned char*)text, size);
+	SHA1Update(&ctx, (const unsigned char*)text, (u_int32_t)size);
 
 	SHA1Final(hash, &ctx);
 	std::string ret;
@@ -108,43 +108,6 @@ std::string get_git_editor()
 
 std::string get_commit_message()
 {
-	#if 0
-	std::ostringstream cmd;
-	cmd << Globals::EditorCommand  << " " << Globals::CommitMessageTmpFile;
-
-	fs::copy_file(Globals::ExecutableDir / "COMMIT_EDITMSG_template.txt", Globals::SimpleGitDir / "COMMIT_EDITMSG", fs::copy_option::overwrite_if_exists);
-
-	PROCESS_INFORMATION pi;
-	STARTUPINFOA si;
-	ZeroMemory(&si, sizeof(si));
-	si.cb = sizeof(si);
-	ZeroMemory(&pi, sizeof(pi));
-
-	if (CreateProcessA(nullptr, (char*)cmd.str().c_str(), nullptr, nullptr, 0, 0, nullptr, nullptr, &si, &pi) <= 0)
-	{
-		char buf[256];
-		FormatMessageA(FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS,
-			NULL, GetLastError(), MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT),
-			buf, (sizeof(buf) / sizeof(char)), NULL);
-		throw Exception(buf);
-	}
-
-	WaitForSingleObject(pi.hProcess, INFINITE);
-
-	std::vector<std::string> lines = Filesystem::read_lines(Globals::CommitMessageTmpFile);
-	std::ostringstream msg;
-
-	for (std::string line : lines)
-	{
-		boost::algorithm::trim(line);
-		if (!line.empty() && line[0] != '#')
-			msg << line << '\n';
-	}
-
-	std::string ret = msg.str();
-	boost::algorithm::trim(ret);
-	return ret;
-	#endif
 	std::ostringstream cmd;
 	cmd << Globals::EditorCommand  << " " << Globals::CommitMessageTmpFile;
 
