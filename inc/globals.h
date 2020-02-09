@@ -24,6 +24,7 @@ namespace Globals
 	extern fs::path			HeadFile;
 
 	extern fs::path			CommitMessageTmpFile;
+	extern fs::path			ObjectTmpFile;
 
 	extern std::map<std::string, std::string>	Config;
 
@@ -35,6 +36,7 @@ namespace Globals
 
 	extern fs::path			ExecutableDir;
 	extern fs::path			CommitMessageTemplateFile;
+	extern std::string		CommitMessagePromptString;
 
 	extern std::string		EditorCommand;
 };

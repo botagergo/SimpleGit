@@ -29,7 +29,7 @@ public:
 	}
 
 protected:
-	BlobReader(const ObjectData& data) : ObjectReader(data) {}
+	BlobReader(const ObjectData& data, const Object& blob) : ObjectReader(data, blob) {}
 };
 
 std::string			write_blob(const std::string& content);

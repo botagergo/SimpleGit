@@ -48,7 +48,7 @@ public:
 	}
 
 protected:
-	TreeReader(const ObjectData& data) : ObjectReader(data) {}
+	TreeReader(const ObjectData& data, const Object& tree) : ObjectReader(data, tree) {}
 };
 
 // creates a new tree from the current index

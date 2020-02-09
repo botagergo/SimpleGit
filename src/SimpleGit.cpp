@@ -75,6 +75,7 @@ void initPathConstants()
 	Globals::HeadFile = Globals::SimpleGitDir / "HEAD";
 
 	Globals::CommitMessageTmpFile = Globals::SimpleGitDir / "COMMIT_EDITMSG";
+	Globals::ObjectTmpFile = Globals::SimpleGitDir / "OBJECT";
 	Globals::ExecutableDir = boost::dll::program_location().parent_path();
 	Globals::CommitMessageTemplateFile = "/usr/share/sgit/COMMIT_EDITMSG_template";
 

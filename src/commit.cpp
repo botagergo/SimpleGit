@@ -5,6 +5,7 @@
 
 #include "branch.h"
 #include "commit.h"
+#include "error.h"
 #include "exception.h"
 #include "filesystem.h"
 #include "globals.h"
@@ -25,7 +26,7 @@ std::istream&	operator>>(std::istream& in_stream, UserInfo& user)
 		;
 
 	if (!in_stream)
-		throw Exception("invalid commit file format");
+		throw Exception("format error");
 
 	std::stringstream email;
 	char ch;
@@ -33,7 +34,7 @@ std::istream&	operator>>(std::istream& in_stream, UserInfo& user)
 		email << ch;
 
 	if (!in_stream)
-		throw Exception("invalid commit file format");
+		throw Exception("format error");
 
 	user.email = email.str();
 
@@ -83,9 +84,16 @@ CommitReader& CommitReader::operator>>(Commit& commit)
 
 Commit CommitReader::read_commit()
 {
-	Commit commit;
-	*this >> commit;
-	return commit;
+	try
+	{
+		Commit commit;
+		*this >> commit;
+		return commit;
+	}
+	catch (const Exception&)
+	{
+		error("commit file corrupted: %s", object().path().c_str());
+	}
 }
 
 std::string write_commit(const Commit& commit)
@@ -96,7 +104,7 @@ std::string write_commit(const Commit& commit)
 	for (const std::string& parent : commit.parents)
 		writer << "parent " << parent << '\n';
 	writer << "author " << commit.author << '\n';
-	writer << "committer " << commit.author << "\n\n";
+	writer << "committer " << commit.committer << "\n\n";
 	writer << commit.message;
 
 	return writer.save();

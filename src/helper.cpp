@@ -15,11 +15,14 @@
 
 std::string get_hash(const char* text, size_t size)
 {
+	char* buf = new char[size];
+	memcpy(buf, text, size);
+
 	SHA1_CTX ctx;
 	SHA1Init(&ctx);
 	unsigned char hash[20];
 
-	SHA1Update(&ctx, (const unsigned char*)text, (u_int32_t)size);
+	SHA1Update(&ctx, (const unsigned char*)buf, (u_int32_t)size);
 
 	SHA1Final(hash, &ctx);
 	std::string ret;
@@ -29,6 +32,8 @@ std::string get_hash(const char* text, size_t size)
 		ret += int_to_hex_char(ch >> 4);
 		ret += int_to_hex_char(ch & 15);
 	}
+
+	delete buf;
 	return ret;
 }
 
@@ -106,12 +111,12 @@ std::string get_git_editor()
 	return get_default_git_editor();
 }
 
-std::string get_commit_message()
+std::string get_commit_message(const std::string& init)
 {
+	Filesystem::write_content(Globals::CommitMessageTmpFile, init + "\n" + Globals::CommitMessagePromptString, Filesystem::FILE_FLAG_OVERWRITE);
+
 	std::ostringstream cmd;
 	cmd << Globals::EditorCommand  << " " << Globals::CommitMessageTmpFile;
-
-	fs::copy_file(Globals::CommitMessageTemplateFile, Globals::CommitMessageTmpFile, fs::copy_option::overwrite_if_exists);
 
 	if (boost::process::system(cmd.str().c_str()) != 0)
 		throw Exception(boost::format("error executing command: %1%") % cmd.str());

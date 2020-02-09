@@ -1,3 +1,4 @@
+#include "inttypes.h"
 #include <fstream>
 #include <sstream>
 
@@ -13,9 +14,8 @@
 
 namespace fs = boost::filesystem;
 
-uint64_t create_file_map_read(const char* object_file, void** ptr);
-void create_file_map_write(const char* object_file, void** ptr, uint64_t fsize);
-void free_file_map(void* ptr, uint64_t size);
+uint64_t create_file_map_read(const char* object_file, void** ptr, std::function<void(void)>& free_map);
+void create_file_map_write(const char* object_file, void** ptr, uint64_t fsize, std::function<void(void)>& free_map);
 
 ObjectData open_object(const char* object_file, bool header_only)
 {
@@ -24,7 +24,8 @@ ObjectData open_object(const char* object_file, bool header_only)
 	Bytef header_buf[ObjectHeader::MaxHeaderSize];
 
 	Bytef* ptr;
-	uint64_t fsize = create_file_map_read(object_file, (void**)&ptr);
+	std::function<void(void)> free_map;
+	uint64_t fsize = create_file_map_read(object_file, (void**)&ptr, free_map);
 
 	z_stream stream;
 
@@ -36,7 +37,7 @@ ObjectData open_object(const char* object_file, bool header_only)
 	inflateInit(&stream);
 	inflate(&stream, Z_NO_FLUSH);
 
-	int n = sscanf((char*)header_buf, "%s %lld\0", data.kind, &data.len);
+	int n = sscanf((char*)header_buf, "%s %" PRId64 "\0", data.kind, &data.len);
 	assert(n == 2);
 
 	if (header_only)
@@ -52,7 +53,7 @@ ObjectData open_object(const char* object_file, bool header_only)
 	data.buf[destLen] = 0;
 
 ret:
-	free_file_map(ptr, fsize);
+	free_map();
 	return data;
 }
 
@@ -61,12 +62,13 @@ void write_object(const char* object_file, const char* buf, uint64_t len)
 	const uint64_t size = len * 2; //TODO change this
 
 	Bytef* ptr;
-	create_file_map_write(object_file, (void**)&ptr, size);
+	std::function<void(void)> free_map;
+	create_file_map_write(object_file, (void**)&ptr, size, free_map);
 
 	uLongf ulen = 1000;
 	compress(ptr, &ulen, (Bytef*)buf, (uLong)size);
 
-	free_file_map(ptr, size);
+	free_map();
 }
 
 std::string ObjectWriter::save()
@@ -79,6 +81,7 @@ std::string ObjectWriter::save()
 
 	char* buf_start = _buf.str() + Globals::MaxObjectHeaderSize - header.str().size();
 	strcpy(buf_start, header.str().c_str());
+	write_object(Globals::ObjectTmpFile.c_str(), buf_start, _buf.content_length() + header.str().size());
 
 	_id = get_hash(buf_start, _buf.content_length() + header.str().size());
 
@@ -86,14 +89,11 @@ std::string ObjectWriter::save()
 	if (Object(_id).exists())
 		return _id;
 
-
 	Filesystem::create_directory(Filesystem::get_object_dir(_id));
-
 	std::string object_file = Filesystem::get_object_path(_id).string();
-
-	write_object(object_file.c_str(), buf_start, _buf.content_length() + header.str().size());
-
+	fs::copy(Globals::ObjectTmpFile, object_file);
 	Filesystem::set_hidden(object_file.c_str());
+
 	_saved = true;
 	return _id;
 }
@@ -123,11 +123,11 @@ std::unique_ptr<ObjectReader> Object::get_reader() const
 {
 	ObjectData data = open_object(_path.string().c_str(), false);
 	if (strcmp(data.kind, "blob") == 0)
-		return std::unique_ptr<ObjectReader>((ObjectReader*)(new BlobReader(data)));
+		return std::unique_ptr<ObjectReader>((ObjectReader*)(new BlobReader(data, *this)));
 	else if (strcmp(data.kind, "tree") == 0)
-		return std::unique_ptr<ObjectReader>((ObjectReader*)(new TreeReader(data)));
+		return std::unique_ptr<ObjectReader>((ObjectReader*)(new TreeReader(data, *this)));
 	else if (strcmp(data.kind, "commit") == 0)
-		return std::unique_ptr<ObjectReader>((ObjectReader*)(new CommitReader(data)));
+		return std::unique_ptr<ObjectReader>((ObjectReader*)(new CommitReader(data, *this)));
 	else
 		throw Exception(boost::format("invalid object kind: %1%") % data.kind);
 }
@@ -137,7 +137,7 @@ std::unique_ptr<BlobReader> Object::get_blob_reader() const
 	ObjectData data = open_object(_path.string().c_str(), false);
 	if (strcmp(data.kind, "blob"))
 		throw Exception(boost::format("object not a blob: ") % _id);
-	return std::unique_ptr<BlobReader>((BlobReader*)(new BlobReader(data)));
+	return std::unique_ptr<BlobReader>((BlobReader*)(new BlobReader(data, *this)));
 }
 
 std::unique_ptr<TreeReader> Object::get_tree_reader() const
@@ -145,7 +145,7 @@ std::unique_ptr<TreeReader> Object::get_tree_reader() const
 	ObjectData data = open_object(_path.string().c_str(), false);
 	if (strcmp(data.kind, "tree"))
 		throw Exception(boost::format("object not a tree: ") % _id);
-	return std::unique_ptr<TreeReader>((TreeReader*)(new TreeReader(data)));
+	return std::unique_ptr<TreeReader>((TreeReader*)(new TreeReader(data, *this)));
 }
 
 std::unique_ptr<CommitReader> Object::get_commit_reader() const
@@ -153,7 +153,7 @@ std::unique_ptr<CommitReader> Object::get_commit_reader() const
 	ObjectData data = open_object(_path.string().c_str(), false);
 	if (strcmp(data.kind, "commit"))
 		throw Exception(boost::format("object not a commit: ") % _id);
-	return std::unique_ptr<CommitReader>((CommitReader*)(new CommitReader(data)));
+	return std::unique_ptr<CommitReader>((CommitReader*)(new CommitReader(data, *this)));
 }
 
 std::ostream& ObjectReader::read_content(std::ostream& out_stream)

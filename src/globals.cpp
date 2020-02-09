@@ -19,6 +19,7 @@ namespace Globals
 	fs::path			HeadFile;
 
 	fs::path			CommitMessageTmpFile;
+	fs::path			ObjectTmpFile;
 
 	std::string			Head;
 
@@ -32,6 +33,8 @@ namespace Globals
 
 	fs::path			ExecutableDir;
 	fs::path			CommitMessageTemplateFile;
+	std::string			CommitMessagePromptString = "# Please enter the commit message for your changes. Lines starting \
+							# with '#' will be ignored, and an empty message aborts the commit.";
 
 	std::string			EditorCommand;
 };

@@ -42,7 +42,7 @@ namespace Filesystem
 	}
 }
 
-uint64_t create_file_map_read(const char* object_file, void** ptr)
+uint64_t create_file_map_read(const char* object_file, void** ptr, std::function<void(void)>& free_map)
 {
 	int fd = open(object_file, O_RDONLY);
 	if (fd == -1)
@@ -55,29 +55,32 @@ uint64_t create_file_map_read(const char* object_file, void** ptr)
 	*ptr = mmap(NULL, fsize, PROT_READ, MAP_SHARED, fd, 0);
 	if (ptr == MAP_FAILED)
 		throw Exception(strerror(errno));
-
 	close(fd);
+
+	free_map = [fd, ptr, fsize]()
+	{
+		munmap(ptr, fsize);
+	};
+
 	return fsize;
 }
 
-void create_file_map_write(const char* object_file, void** ptr, uint64_t fsize)
+void create_file_map_write(const char* object_file, void** ptr, uint64_t fsize, std::function<void(void)>& free_map)
 {
 	int fd = open(object_file, O_CREAT | O_RDWR, 0600);
 	if (fd == -1)
 		throw Exception(strerror(errno));
 
-	fallocate(fd, 0, 0, fsize);
+	posix_fallocate(fd, 0, fsize);
 
-	void* addr = mmap(NULL, fsize, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
-	if (addr == MAP_FAILED)
+	*ptr = mmap(NULL, fsize, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
+	if (*ptr == MAP_FAILED)
 		throw Exception("mmap error");
-
 	close(fd);
-	return fsize;
-}
 
-void free_file_map(void* ptr, uint64_t size)
-{
-	munmap(ptr, size);
+	free_map = [fd, ptr, fsize]()
+	{
+		munmap(ptr, fsize);
+	};
 }
 #endif

@@ -65,7 +65,7 @@ namespace Filesystem
 	void write_content(const fs::path &file, const std::string &content, int flags)
 	{
 		if (!(flags & FILE_FLAG_OVERWRITE) && fs::exists(file))
-			throw Exception(boost::format("file exists: ") % file);
+			throw Exception(boost::format("file exists: %1%") % file);
 
 		if (flags & FILE_FLAG_CREATE_DIRECTORY)
 			create_directories(file.parent_path());

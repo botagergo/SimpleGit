@@ -28,4 +28,4 @@ fs::path    get_home_directory();
 std::string get_username();
 std::string get_git_editor();
 std::string get_default_git_editor();
-std::string get_commit_message();
+std::string get_commit_message(const std::string& init = {});

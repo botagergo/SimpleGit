@@ -34,7 +34,7 @@ namespace Filesystem
 	}
 }
 
-uint64_t create_file_map_read(const char* object_file, void** ptr)
+uint64_t create_file_map_read(const char* object_file, void** ptr, std::function<void(void)>& free_map)
 {
 	HANDLE file = CreateFileA(object_file, GENERIC_READ, 0, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, 0);
 	if (file == INVALID_HANDLE_VALUE)
@@ -52,11 +52,16 @@ uint64_t create_file_map_read(const char* object_file, void** ptr)
 	GetFileSizeEx(file, (PLARGE_INTEGER)& l_fsize);
 	uint64_t fsize = l_fsize.QuadPart;
 
-	CloseHandle(file);
+	free_map = [file, ptr]()
+	{
+		CloseHandle(file);
+		UnmapViewOfFile(ptr);
+	}
+
 	return fsize;
 }
 
-void create_file_map_write(const char* object_file, void** ptr, uint64_t fsize)
+void create_file_map_write(const char* object_file, void** ptr, uint64_t fsize, std::function<void(void)>& free_map)
 {
 	HANDLE file = CreateFileA(object_file, GENERIC_READ | GENERIC_WRITE, 0, NULL, CREATE_ALWAYS, 0, 0);
 	if (file == NULL)
@@ -69,7 +74,12 @@ void create_file_map_write(const char* object_file, void** ptr, uint64_t fsize)
 	*ptr = MapViewOfFile(map, FILE_MAP_WRITE, 0, 0, fsize);
 	if (ptr == NULL)
 		throw Exception("MapViewOfFile");
-	CloseHandle(file);
+
+	free_map = [file, ptr]()
+	{
+		CloseHandle(file);
+		UnmapViewOfFile(ptr);
+	}
 }
 void free_file_map(void* ptr, uint64_t size)
 {

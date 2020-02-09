@@ -36,7 +36,7 @@ public:
 	CommitReader& operator>>(Commit& commit);
 
 protected:
-	CommitReader(const ObjectData& data) : ObjectReader(data) {}
+	CommitReader(const ObjectData& data, const Object& object) : ObjectReader(data, object) {}
 };
 
 std::string		write_commit(const Commit& commit);

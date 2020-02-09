@@ -75,9 +75,16 @@ void init_filesystem()
 	Filesystem::write_content(Globals::ConfigFile, "", Filesystem::FILE_FLAG_OVERWRITE);
 }
 
+void check_git_repository()
+{
+	if (!fs::exists(Globals::SimpleGitDir))
+		error("not a git repository: %s", fs::absolute(fs::path("")).c_str()); //TODO: doesn't work
+}
+
 // initializes stuff that are needed for the actual repository commands
 void init_for_git_commands(const po::variables_map& vm)
 {
+	check_git_repository();
 	Config::init();
 
 	if (vm.count("verbose"))
@@ -221,6 +228,7 @@ void cmd_commit(int argc, char* argv[])
 		("file,F", po::value<std::string>(), "commit message file")
 		("all,a", po::value<bool>()->implicit_value(true)->zero_tokens(), "stage modified and deleted files")
 		("reuse-message,C", po::value<std::string>())
+		("reedit-message,c", po::value<std::string>())
 		;
 
 	po::variables_map vm;
@@ -247,6 +255,11 @@ void cmd_commit(int argc, char* argv[])
 
 	if (vm.count("reuse-message"))
 		commit = Object(resolve_to_commit(vm["reuse-message"].as<std::string>())).get_commit_reader()->read_commit();
+	else if (vm.count("reedit-message"))
+	{
+		commit = Object(resolve_to_commit(vm["reedit-message"].as<std::string>())).get_commit_reader()->read_commit();
+		commit.message = get_commit_message(commit.message);
+	}
 	else
 	{
 		try
@@ -312,6 +325,7 @@ void cmd_commit(int argc, char* argv[])
 			commit.parents = { head }; // head is detached
 	}
 
+	std::cout << commit.tree_id << std::endl;
 	std::string commit_id = write_commit(commit);
 
 	if (head_exists && not_detached)

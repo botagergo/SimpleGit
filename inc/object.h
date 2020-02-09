@@ -47,6 +47,10 @@ public:
 	virtual std::ostream&	pretty_print(std::ostream& out_stream) = 0;
 	std::ostream&			read_content(std::ostream& out_stream);
 
+	const Object&			object() const {
+
+	}
+
 	operator bool() const {
 		return _valid;
 	}
@@ -57,16 +61,17 @@ public:
 	}
 
 protected:
-	ObjectReader(const ObjectData& data) : _data(data), _curr_pos(data.buf), _valid(true)
+	ObjectReader(const ObjectData& data, const Object& object) : _data(data), _curr_pos(data.buf), _valid(true), _object(object)
 	{
 		_curr_pos += strlen(_curr_pos) + 1;
 		_end = _curr_pos + data.len;
 	}
 
-	ObjectData	_data;
-	char*		_curr_pos;
-	char*		_end;
-	bool		_valid;
+	const Object&	_object;
+	ObjectData		_data;
+	char*			_curr_pos;
+	char*			_end;
+	bool			_valid;
 };
 
 class ObjectWriterStreambuf : public std::streambuf

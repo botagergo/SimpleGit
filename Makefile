@@ -25,7 +25,7 @@ DISABLE_WARNINGS = -Wno-format-security -Wno-format-contains-nul
 CXXFLAGS = $(INCDIR:%=-I%) $(DISABLE_WARNINGS)
 CPPFLAGS = -L$(BOOST_LIB_DIR) $(LIB:%=-l%)
 
-DEBUG ?= 0
+DEBUG ?= 1
 ifeq ($(DEBUG),1)
 	CXXFLAGS += -g -O0
 	CPPFLAGS += -g -O0
@@ -68,5 +68,8 @@ $(TARGET): $(OBJS)
 $(OBJDIR)/%.o: $(SRCDIR)/%.cpp
 	@echo compiling $<...
 	@$(CXX) -c -o $@ $< $(CXXFLAGS)
+
+linux.h:
+windows.h:
 
 -include $(DEPS)
