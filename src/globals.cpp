@@ -4,10 +4,19 @@
 
 namespace Globals
 {
-	fs::path			DefaultSimpleGitDir;
+	fs::path			DefaultGitDirName = ".git";
+	
+	fs::path			HeadFileName = "HEAD";
+	fs::path			IndexFileName = "INDEX";
+	fs::path			ObjectDirName = "objects";
+	fs::path			RefDirName = "refs";
+	fs::path			TagDirName = "tags";
+	fs::path			BranchDirName = "heads";
+
 	fs::path			DefaultSimpleGitConfig;
 
-	fs::path			SimpleGitDir;
+	fs::path			GitDir;
+
 	fs::path			ObjectDir;
 	fs::path			RefDir;
 	fs::path			TagDir;

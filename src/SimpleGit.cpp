@@ -40,46 +40,12 @@ std::map<std::string, void (*)(int argc, char* argv[])> command_map {
 
 void clear_filesystem()
 {
-	fs::remove_all(Globals::SimpleGitDir);
+	fs::remove_all(Globals::GitDir);
 }
 
 int test()
 {
 	return 0;
-}
-
-void initPathConstants()
-{
-	Globals::DefaultSimpleGitDir = ".git";
-	const char* gitdir = std::getenv("SIMPLEGIT_DIR");
-	if (gitdir)
-		Globals::SimpleGitDir = gitdir;
-	else
-		Globals::SimpleGitDir = Globals::DefaultSimpleGitDir;
-
-	Globals::DefaultSimpleGitConfig = Globals::SimpleGitDir / "config";
-	const char* config = std::getenv("SIMPLEGIT_CONFIG");
-	if (config)
-		Globals::ConfigFile = Globals::SimpleGitDir / config;
-	else
-		Globals::ConfigFile = Globals::DefaultSimpleGitConfig;
-
-	Globals::GlobalConfigFile = get_home_directory() / ".sgitconfig";
-
-	Globals::ObjectDir = Globals::SimpleGitDir / "objects";
-	Globals::RefDir = Globals::SimpleGitDir / "refs";
-	Globals::TagDir = Globals::RefDir / "tags";
-	Globals::BranchDir = Globals::RefDir / "heads";
-
-	Globals::IndexFile = Globals::SimpleGitDir / "INDEX";
-	Globals::HeadFile = Globals::SimpleGitDir / "HEAD";
-
-	Globals::CommitMessageTmpFile = Globals::SimpleGitDir / "COMMIT_EDITMSG";
-	Globals::ObjectTmpFile = Globals::SimpleGitDir / "OBJECT";
-	Globals::ExecutableDir = boost::dll::program_location().parent_path();
-	Globals::CommitMessageTemplateFile = "/usr/share/sgit/COMMIT_EDITMSG_template";
-
-	Globals::EditorCommand = get_git_editor();
 }
 
 #include <fstream>
@@ -88,7 +54,6 @@ int main(int argc, char* argv[])
 #ifdef WAIT_FOR_ENTER
 	{std::string str; std::cin >> str; }
 #endif
-	initPathConstants();
 
 	try {
 		if (argc == 1)

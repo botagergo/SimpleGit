@@ -7,6 +7,7 @@
 #include <boost/program_options.hpp>
 #include <boost/format.hpp>
 #include <boost/algorithm/string/join.hpp>
+#include <boost/dll.hpp>
 
 #include "branch.h"
 #include "checkout.h"
@@ -23,6 +24,7 @@
 #include "merge.h"
 #include "object.h"
 #include "ref.h"
+#include "repository.h"
 #include "tag.h"
 #include "tree.h"
 
@@ -66,7 +68,7 @@ void at_least_one_required(const po::variables_map& vm, const std::vector<std::s
 
 void init_filesystem()
 {
-	Filesystem::create_directory(Globals::SimpleGitDir, Filesystem::FILE_FLAG_HIDDEN);
+	Filesystem::create_directory(Globals::GitDir, Filesystem::FILE_FLAG_HIDDEN);
 	Filesystem::create_directory(Globals::ObjectDir);
 	Filesystem::create_directory(Globals::RefDir);
 	Filesystem::create_directory(Globals::TagDir);
@@ -75,20 +77,77 @@ void init_filesystem()
 	Filesystem::write_content(Globals::ConfigFile, "", Filesystem::FILE_FLAG_OVERWRITE);
 }
 
-void check_git_repository()
+void init_path_constants()
 {
-	if (!fs::exists(Globals::SimpleGitDir))
-		error("not a git repository: %s", fs::absolute(fs::path("")).c_str()); //TODO: doesn't work
+	if (Globals::GitDir == fs::path())
+	{
+		assert(false); // Globals::GitDir has to be initialized before running init_path_constants()!
+	}
+
+	Globals::DefaultSimpleGitConfig = Globals::GitDir / "config";
+	const char* config = std::getenv("GIT_CONFIG");
+	if (config)
+		Globals::ConfigFile = Globals::GitDir / config;
+	else
+		Globals::ConfigFile = Globals::DefaultSimpleGitConfig;
+
+	Globals::GlobalConfigFile = get_home_directory() / ".sgitconfig";
+
+	Globals::ObjectDir = Globals::GitDir / Globals::ObjectDirName;
+	Globals::RefDir = Globals::GitDir / Globals::RefDirName;
+	Globals::TagDir = Globals::RefDir / Globals::TagDirName;
+	Globals::BranchDir = Globals::RefDir / Globals::BranchDirName;
+
+	Globals::IndexFile = Globals::GitDir / Globals::IndexFileName;
+	Globals::HeadFile = Globals::GitDir / Globals::HeadFileName;
+
+	Globals::CommitMessageTmpFile = Globals::GitDir / "COMMIT_EDITMSG";
+	Globals::ObjectTmpFile = Globals::GitDir / "OBJECT";
+	Globals::ExecutableDir = boost::dll::program_location().parent_path();
+	Globals::CommitMessageTemplateFile = "/usr/share/sgit/COMMIT_EDITMSG_template";
+
+	Globals::EditorCommand = get_git_editor();
 }
 
-// initializes stuff that are needed for the actual repository commands
-void init_for_git_commands(const po::variables_map& vm)
+void init_for_git_commands(const po::variables_map& vm, fs::path root_dir=fs::path())
 {
-	check_git_repository();
+	const char* git_dir_env = std::getenv("GIT_DIR");
+	if (git_dir_env)
+	{
+		Globals::GitDir = git_dir_env;
+		if (!is_git_dir(Globals::GitDir))
+    	{
+			throw Exception(boost::format("fatal: not a git repository: ")
+        		% Globals::GitDir);
+		}
+	}
+	else
+	{
+		Globals::GitDir = find_git_dir(fs::current_path());
+		if (Globals::GitDir == fs::path())
+		{
+			throw Exception(boost::format("fatal: not a git repository (or any of the parent directories): ")
+        		% Globals::GitDir);
+		}
+	}
+
+	init_path_constants();
+
 	Config::init();
 
 	if (vm.count("verbose"))
 		Globals::Verbose = true;
+}
+
+void initGit(fs::path root_dir=fs::path())
+{
+	if (root_dir == fs::path())
+		root_dir = find_git_dir(fs::current_path());
+
+	if (root_dir == fs::path())
+		throw Exception("fatal: not a git repository");
+
+	init_path_constants();
 }
 
 ArgType get_arg_type(const std::string& arg)
@@ -109,12 +168,13 @@ ArgType get_arg_type(const std::string& arg)
 void cmd_init(int argc, char* argv[])
 {
 	po::positional_options_description pos;
-	pos
-		;
+	pos.add("directory", 1);
 
 	po::options_description desc;
 	desc.add_options()
 	("help,h", po::value<bool>()->implicit_value(true)->zero_tokens(), "prints command usage")
+	("bare", po::value<bool>()->implicit_value(true)->zero_tokens()->default_value(false), "initialize a bare repository")
+	("directory", po::value<fs::path>(), "the directory in which to initialise the repository")
 		;
 
 	po::variables_map vm;
@@ -130,13 +190,34 @@ void cmd_init(int argc, char* argv[])
 		return;
 	}
 
-	if (!fs::exists(Globals::SimpleGitDir))
+	bool bare = vm["bare"].as<bool>();
+
+	fs::path git_dir;
+	const char* git_dir_env;
+
+	if (vm.count("directory"))
 	{
-		init_filesystem();
-		std::cout << "initialized empty git repository in " + fs::absolute(Globals::SimpleGitDir).string() << '\n';
+		Globals::GitDir =  bare ? vm["directory"].as<fs::path>() : vm["directory"].as<fs::path>() / Globals::DefaultGitDirName;
+	}
+	else if (git_dir_env = std::getenv("GIT_DIR"))
+	{
+		Globals::GitDir = git_dir_env;
+		bare = true;
 	}
 	else
-		error("git repository already exists: " + fs::absolute(Globals::SimpleGitDir).string());
+	{
+		Globals::GitDir = bare ? fs::current_path() : fs::current_path() / Globals::DefaultGitDirName;
+	}
+
+	init_path_constants();
+
+	if (!is_git_dir(Globals::GitDir))
+	{
+		init_filesystem();
+		std::cout << "Initialized empty Git repository in " + fs::canonical(Globals::GitDir).string() << '\n';
+	}
+	else
+		error("git repository already exists: " + fs::absolute(Globals::GitDir).string());
 }
 
 void cmd_add(int argc, char* argv[])

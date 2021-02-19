@@ -92,7 +92,7 @@ Commit CommitReader::read_commit()
 	}
 	catch (const Exception&)
 	{
-		error("commit file corrupted: %s", object().path().c_str());
+		throw Exception(boost::format("commit file corrupted: %1%") % object().path().c_str());
 	}
 }
 

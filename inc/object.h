@@ -47,8 +47,8 @@ public:
 	virtual std::ostream&	pretty_print(std::ostream& out_stream) = 0;
 	std::ostream&			read_content(std::ostream& out_stream);
 
-	const Object&			object() const {
-
+	const Object& object() const {
+		return _object;
 	}
 
 	operator bool() const {

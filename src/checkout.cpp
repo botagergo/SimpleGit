@@ -10,7 +10,7 @@ void clear_working_directory()
 {
 	for (const fs::path& path : fs::directory_iterator("."))
 	{
-		if(!fs::equivalent(path, Globals::SimpleGitDir))
+		if(!fs::equivalent(path, Globals::GitDir))
 			fs::remove_all(path);
 	}
 }

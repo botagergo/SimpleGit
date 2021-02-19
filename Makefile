@@ -9,16 +9,16 @@ PACKAGE_NAME = sgit_1.0-1
 
 BOOST_LIB_DIR = /usr/lib
 BOOST_LIB = boost_filesystem boost_system boost_program_options
-LIB = $(BOOST_LIB) dl z
+LIB = $(BOOST_LIB) dl z pthread 
 
 SOURCES = blob commands diff helper object SimpleGit branch commit filesystem \
-	index ref tag checkout config globals merge sha1 tree linux
+	  index ref tag checkout config globals merge sha1 tree linux repository
 OBJS = $(SOURCES:%=$(OBJDIR)/%.o)
 DEPS = $(SOURCES:%=$(OBJDIR)/%.d)
 CPPS = $(SOURCES:%=$(SRCDIR)/%.cpp)
 
 CXX = g++
-RM = rm -f
+RM = rm -rf
 
 DISABLE_WARNINGS = -Wno-format-security -Wno-format-contains-nul
 
@@ -43,8 +43,7 @@ test:
 .PHONY: build rebuild clean install create_directories
 
 clean:
-	find $(OBJDIR) $(DEBUGDIR) $(RELEASEDIR)  -type f -delete
-	#@$(RM) $(OBJDIR)/* $(DEBUGDIR)/* $(RELEASEDIR)/*
+	@$(RM) $(OBJDIR) $(DEBUGDIR) $(RELEASEDIR)
 dummy:
 	@echo expected argument
 
@@ -52,7 +51,10 @@ build:		$(TARGET)
 rebuild:	clean build
 
 install: build
-	@cp $(TARGET) $(BINDIR)/$(PACKAGE_NAME)/usr/local/bin
+	@mkdir -p $(BINDIR)/$(PACKAGE_NAME)/usr/local/bin/
+	@mkdir -p $(BINDIR)/$(PACKAGE_NAME)/DEBIAN
+	@cp DEBIAN $(BINDIR)/$(PACKAGE_NAME)/DEBIAN/control
+	@cp $(TARGET) $(BINDIR)/$(PACKAGE_NAME)/usr/local/bin/
 	@dpkg-deb --build $(BINDIR)/$(PACKAGE_NAME)
 	@dpkg -i $(BINDIR)/$(PACKAGE_NAME).deb
 
@@ -62,10 +64,12 @@ reinstall: rebuild
 	@dpkg -i $(BINDIR)/$(PACKAGE_NAME).deb
 
 $(TARGET): $(OBJS)
+	@mkdir -p `dirname $@`
 	@echo linking...
 	@$(CXX) -o $@ $^ $(CPPFLAGS)
 
 $(OBJDIR)/%.o: $(SRCDIR)/%.cpp
+	@mkdir -p obj
 	@echo compiling $<...
 	@$(CXX) -c -o $@ $< $(CXXFLAGS)
 

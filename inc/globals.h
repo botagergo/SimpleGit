@@ -9,10 +9,19 @@
 
 namespace Globals
 {
-	extern fs::path			DefaultSimpleGitDir;
+	extern fs::path			DefaultGitDirName;
+
+	extern fs::path			HeadFileName;
+	extern fs::path			IndexFileName;
+	extern fs::path			ObjectDirName;
+	extern fs::path			RefDirName;
+	extern fs::path			TagDirName;
+	extern fs::path			BranchDirName;
+
 	extern fs::path			DefaultSimpleGitConfig;
 
-	extern fs::path			SimpleGitDir;
+	extern fs::path			GitDir;
+
 	extern fs::path			ObjectDir;
 	extern fs::path			TagDir;
 	extern fs::path			RefDir;
