@@ -66,16 +66,7 @@ void at_least_one_required(const po::variables_map& vm, const std::vector<std::s
 	throw Exception(boost::format("at least one of %1% is required") % boost::join(options, ", "));
 }
 
-void init_filesystem()
-{
-	Filesystem::create_directory(Globals::GitDir, Filesystem::FILE_FLAG_HIDDEN);
-	Filesystem::create_directory(Globals::ObjectDir);
-	Filesystem::create_directory(Globals::RefDir);
-	Filesystem::create_directory(Globals::TagDir);
-	Filesystem::create_directory(Globals::BranchDir);
 
-	Filesystem::write_content(Globals::ConfigFile, "", Filesystem::FILE_FLAG_OVERWRITE);
-}
 
 void init_path_constants()
 {
@@ -139,6 +130,17 @@ void init_for_git_commands(const po::variables_map& vm, fs::path root_dir=fs::pa
 		Globals::Verbose = true;
 }
 
+fs::path get_template_dir(const po::variables_map& vm)
+{
+	const char* template_dir_env;
+	if (vm.count("template"))
+		return vm["template"].as<fs::path>();
+	else if (template_dir_env = std::getenv("GIT_TEMPLATE_DIR"))
+		return template_dir_env;
+	//TODO: init.templateDir config variable
+	else return Globals::DefaultTemplateDir;
+}
+
 void initGit(fs::path root_dir=fs::path())
 {
 	if (root_dir == fs::path())
@@ -174,6 +176,7 @@ void cmd_init(int argc, char* argv[])
 	desc.add_options()
 	("help,h", po::value<bool>()->implicit_value(true)->zero_tokens(), "prints command usage")
 	("bare", po::value<bool>()->implicit_value(true)->zero_tokens()->default_value(false), "initialize a bare repository")
+	("template", po::value<fs::path>(), "the directory to be used as the template for the repository")
 	("directory", po::value<fs::path>(), "the directory in which to initialise the repository")
 		;
 
@@ -198,6 +201,7 @@ void cmd_init(int argc, char* argv[])
 	if (vm.count("directory"))
 	{
 		Globals::GitDir =  bare ? vm["directory"].as<fs::path>() : vm["directory"].as<fs::path>() / Globals::DefaultGitDirName;
+		Filesystem::create_directory(Globals::GitDir);
 	}
 	else if (git_dir_env = std::getenv("GIT_DIR"))
 	{
@@ -211,13 +215,13 @@ void cmd_init(int argc, char* argv[])
 
 	init_path_constants();
 
-	if (!is_git_dir(Globals::GitDir))
-	{
-		init_filesystem();
-		std::cout << "Initialized empty Git repository in " + fs::canonical(Globals::GitDir).string() << '\n';
-	}
-	else
-		error("git repository already exists: " + fs::absolute(Globals::GitDir).string());
+	if (is_git_dir(Globals::GitDir))
+		throw Exception(boost::format("git repository already exists: %1%") % fs::absolute(Globals::GitDir).string());
+
+	fs::path template_dir = get_template_dir(vm);
+	init_git_dir(template_dir);
+
+	std::cout << "Initialized empty Git repository in " + fs::canonical(Globals::GitDir).string() << '\n';
 }
 
 void cmd_add(int argc, char* argv[])

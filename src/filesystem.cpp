@@ -1,4 +1,5 @@
 #include <fstream>
+#include <filesystem>
 
 #include <boost/filesystem.hpp>
 #include <boost/system/error_code.hpp>
@@ -29,6 +30,17 @@ namespace Filesystem
 		
 		if (flags & FILE_FLAG_HIDDEN)
 			set_hidden(dir.c_str());
+	}
+
+	void copy_directory(const fs::path& src, const fs::path& dest, int flags)
+	{
+		std::filesystem::copy_options options = std::filesystem::copy_options::none;
+		if (flags & FILE_FLAG_OVERWRITE)
+			options |= std::filesystem::copy_options::overwrite_existing;
+		if (flags & FILE_FLAG_RECURSIVE)
+			options |= std::filesystem::copy_options::recursive;
+		
+		std::filesystem::copy(src.string(), dest.string(), options);
 	}
 
 	std::string read_content(const fs::path &file)

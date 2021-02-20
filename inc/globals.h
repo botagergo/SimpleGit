@@ -18,6 +18,9 @@ namespace Globals
 	extern fs::path			TagDirName;
 	extern fs::path			BranchDirName;
 
+	extern fs::path			GitCoreDir;
+	extern fs::path			DefaultTemplateDir;
+
 	extern fs::path			DefaultSimpleGitConfig;
 
 	extern fs::path			GitDir;

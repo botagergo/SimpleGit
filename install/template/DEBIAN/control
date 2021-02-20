@@ -1,0 +1,7 @@
+Package: sgit
+Version: 1.0-1
+Section: base
+Priority: optional
+Architecture: amd64
+Maintainer: Bóta Gergely <botagergo@gmail.com>
+Description: Git Version Control

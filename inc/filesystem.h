@@ -15,11 +15,13 @@ namespace Filesystem
 		FILE_FLAG_HIDDEN			= 2,
 		FILE_FLAG_OVERWRITE			= 4,
 		FILE_FLAG_CREATE_DIRECTORY	= 8,
+		FILE_FLAG_RECURSIVE			= 16,
 	};
 
 	void set_hidden(const fs::path& path);
 
 	void create_directory(const fs::path& dir, int flags = 0);
+	void copy_directory(const fs::path& src, const fs::path& dest, int flags);
 
 	template <typename FileStream>
 	void open(const fs::path& path, FileStream& stream, int flags = 0)

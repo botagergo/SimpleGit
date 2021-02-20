@@ -4,7 +4,7 @@
 
 namespace Globals
 {
-	fs::path			DefaultGitDirName = ".git";
+	fs::path			DefaultGitDirName = ".sgit";
 	
 	fs::path			HeadFileName = "HEAD";
 	fs::path			IndexFileName = "INDEX";
@@ -12,6 +12,9 @@ namespace Globals
 	fs::path			RefDirName = "refs";
 	fs::path			TagDirName = "tags";
 	fs::path			BranchDirName = "heads";
+
+	fs::path			GitCoreDir = "/usr/share/sgit-core/";
+	fs::path			DefaultTemplateDir = Globals::GitCoreDir / "templates";
 
 	fs::path			DefaultSimpleGitConfig;
 

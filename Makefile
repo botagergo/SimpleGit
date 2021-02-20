@@ -22,8 +22,8 @@ RM = rm -rf
 
 DISABLE_WARNINGS = -Wno-format-security -Wno-format-contains-nul
 
-CXXFLAGS = $(INCDIR:%=-I%) $(DISABLE_WARNINGS)
-CPPFLAGS = -L$(BOOST_LIB_DIR) $(LIB:%=-l%)
+CXXFLAGS = $(INCDIR:%=-I%) $(DISABLE_WARNINGS) -std=c++17
+CPPFLAGS = -L$(BOOST_LIB_DIR) $(LIB:%=-l%) -std=c++17
 
 DEBUG ?= 1
 ifeq ($(DEBUG),1)
@@ -51,17 +51,14 @@ build:		$(TARGET)
 rebuild:	clean build
 
 install: build
-	@mkdir -p $(BINDIR)/$(PACKAGE_NAME)/usr/local/bin/
-	@mkdir -p $(BINDIR)/$(PACKAGE_NAME)/DEBIAN
-	@cp DEBIAN $(BINDIR)/$(PACKAGE_NAME)/DEBIAN/control
-	@cp $(TARGET) $(BINDIR)/$(PACKAGE_NAME)/usr/local/bin/
-	@dpkg-deb --build $(BINDIR)/$(PACKAGE_NAME)
-	@dpkg -i $(BINDIR)/$(PACKAGE_NAME).deb
+	@rm -rf install/$(PACKAGE_NAME)
+	@cp -r install/template/ install/$(PACKAGE_NAME)/
+	@mkdir -p install/$(PACKAGE_NAME)/usr/local/bin/
+	@cp $(TARGET) install/$(PACKAGE_NAME)/usr/local/bin/
+	@dpkg-deb --build install/$(PACKAGE_NAME)
+	@dpkg -i install/$(PACKAGE_NAME).deb
 
-reinstall: rebuild
-	@cp $(TARGET) $(BINDIR)/$(PACKAGE_NAME)/usr/local/bin
-	@dpkg-deb --build $(BINDIR)/$(PACKAGE_NAME)
-	@dpkg -i $(BINDIR)/$(PACKAGE_NAME).deb
+reinstall: rebuild install
 
 $(TARGET): $(OBJS)
 	@mkdir -p `dirname $@`
