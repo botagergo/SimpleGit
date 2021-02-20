@@ -1,3 +1,4 @@
+#include "error.h"
 #include "filesystem.h"
 #include "globals.h"
 #include "repository.h"
@@ -27,15 +28,30 @@ bool is_git_dir(const fs::path& path)
         && fs::exists(path / Globals::RefDirName);
 }
 
-void init_git_dir(const fs::path& template_dir)
+void init_git_dir(const fs::path& template_dir, bool reinitialize)
 {
-    Filesystem::copy_directory(template_dir, Globals::GitDir,
-        Filesystem::FILE_FLAG_OVERWRITE | Filesystem::FILE_FLAG_RECURSIVE);
+    try
+    {
+        Filesystem::copy_directory(template_dir, Globals::GitDir,
+            Filesystem::FILE_FLAG_SKIP_EXISTING | Filesystem::FILE_FLAG_RECURSIVE);
+    }
+    catch (const std::exception& e)
+    {
+        warning(boost::format("failed to copy template directory: %1%") % e.what());
+    }
 
-    // TODO: create HEAD
-    Filesystem::write_content(Globals::ConfigFile, "", Filesystem::FILE_FLAG_OVERWRITE);
-	Filesystem::create_directory(Globals::ObjectDir);
-	Filesystem::create_directory(Globals::RefDir);
-	Filesystem::create_directory(Globals::TagDir);
-	Filesystem::create_directory(Globals::BranchDir);
+    if (!reinitialize)
+    {
+        // TODO: create HEAD
+        Filesystem::write_content(Globals::ConfigFile, "", Filesystem::FILE_FLAG_OVERWRITE);
+	    Filesystem::create_directory(Globals::ObjectDir);
+	    Filesystem::create_directory(Globals::RefDir);
+	    Filesystem::create_directory(Globals::TagDir);
+	    Filesystem::create_directory(Globals::BranchDir);
+    }
+}
+
+void write_git_dir_ref(const fs::path& git_dir, const fs::path& ref_file)
+{
+    Filesystem::write_content(ref_file, (boost::format("gitdir: %1%") % git_dir).str());
 }

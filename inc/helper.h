@@ -29,3 +29,6 @@ std::string get_username();
 std::string get_git_editor();
 std::string get_default_git_editor();
 std::string get_commit_message(const std::string& init = {});
+
+void check_error_code(const boost::system::error_code& ec, const std::string& arg="");
+void check_error_code(const std::error_code& ec, const std::string& arg="");

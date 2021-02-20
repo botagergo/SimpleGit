@@ -46,7 +46,7 @@ namespace Config
 
 	void write(const fs::path& config_file, const std::map<std::string, std::string>& config)
 	{
-		Filesystem::make_sure_file_exists(config_file);
+		Filesystem::check_file_exists(config_file);
 
 		std::ofstream out_stream;
 		Filesystem::open(config_file, out_stream);
@@ -57,7 +57,7 @@ namespace Config
 
 	void write(const fs::path& config_file, const std::string& name, const std::string& value)
 	{
-		Filesystem::make_sure_file_exists(config_file);
+		Filesystem::check_file_exists(config_file);
 
 		auto config = read(config_file);
 		config[name] = value;

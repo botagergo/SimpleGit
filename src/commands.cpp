@@ -108,7 +108,7 @@ void init_for_git_commands(const po::variables_map& vm, fs::path root_dir=fs::pa
 		Globals::GitDir = git_dir_env;
 		if (!is_git_dir(Globals::GitDir))
     	{
-			throw Exception(boost::format("fatal: not a git repository: ")
+			throw Exception(boost::format("not a git repository: ")
         		% Globals::GitDir);
 		}
 	}
@@ -117,7 +117,7 @@ void init_for_git_commands(const po::variables_map& vm, fs::path root_dir=fs::pa
 		Globals::GitDir = find_git_dir(fs::current_path());
 		if (Globals::GitDir == fs::path())
 		{
-			throw Exception(boost::format("fatal: not a git repository (or any of the parent directories): ")
+			throw Exception(boost::format("not a git repository (or any of the parent directories): ")
         		% Globals::GitDir);
 		}
 	}
@@ -147,7 +147,7 @@ void initGit(fs::path root_dir=fs::path())
 		root_dir = find_git_dir(fs::current_path());
 
 	if (root_dir == fs::path())
-		throw Exception("fatal: not a git repository");
+		throw Exception("not a git repository");
 
 	init_path_constants();
 }
@@ -177,6 +177,7 @@ void cmd_init(int argc, char* argv[])
 	("help,h", po::value<bool>()->implicit_value(true)->zero_tokens(), "prints command usage")
 	("bare", po::value<bool>()->implicit_value(true)->zero_tokens()->default_value(false), "initialize a bare repository")
 	("template", po::value<fs::path>(), "the directory to be used as the template for the repository")
+	("separate-git-dir", po::value<fs::path>(), "the directory for the actual repository")
 	("directory", po::value<fs::path>(), "the directory in which to initialise the repository")
 		;
 
@@ -194,34 +195,58 @@ void cmd_init(int argc, char* argv[])
 	}
 
 	bool bare = vm["bare"].as<bool>();
+	bool separate_git_dir = !!vm.count("separate-git-dir");
 
+	// The repository is created here
+	// If separate-git-dir is specified, it is a file containing a reference to the actual repository
 	fs::path git_dir;
+
+	// The path where the actual repository files are stored
+	// Can be different from git_dir if separate-git-dir is specified
+	fs::path actual_git_dir;
+
 	const char* git_dir_env;
 
 	if (vm.count("directory"))
 	{
-		Globals::GitDir =  bare ? vm["directory"].as<fs::path>() : vm["directory"].as<fs::path>() / Globals::DefaultGitDirName;
-		Filesystem::create_directory(Globals::GitDir);
+		git_dir =  bare ? vm["directory"].as<fs::path>() : vm["directory"].as<fs::path>() / Globals::DefaultGitDirName;
 	}
 	else if (git_dir_env = std::getenv("GIT_DIR"))
 	{
-		Globals::GitDir = git_dir_env;
+		git_dir = git_dir_env;
 		bare = true;
 	}
 	else
 	{
-		Globals::GitDir = bare ? fs::current_path() : fs::current_path() / Globals::DefaultGitDirName;
+		git_dir = bare ? fs::current_path() : fs::current_path() / Globals::DefaultGitDirName;
 	}
 
+	if (separate_git_dir)
+	{
+		actual_git_dir = vm["separate-git-dir"].as<fs::path>();
+	}
+	else
+	{
+		actual_git_dir = git_dir;
+	}
+
+	Filesystem::create_directory(actual_git_dir, Filesystem::FILE_FLAG_RECURSIVE);
+
+	Globals::GitDir = actual_git_dir;
 	init_path_constants();
 
-	if (is_git_dir(Globals::GitDir))
-		throw Exception(boost::format("git repository already exists: %1%") % fs::absolute(Globals::GitDir).string());
-
 	fs::path template_dir = get_template_dir(vm);
-	init_git_dir(template_dir);
 
-	std::cout << "Initialized empty Git repository in " + fs::canonical(Globals::GitDir).string() << '\n';
+	bool reinitialize = is_git_dir(Globals::GitDir);
+	init_git_dir(template_dir, reinitialize);
+
+	if (separate_git_dir)
+		write_git_dir_ref(fs::canonical(actual_git_dir), git_dir);
+
+	if (reinitialize)
+		std::cout << "Reinitialized existing Git repository in " + fs::canonical(Globals::GitDir).string() << '\n';
+	else
+		std::cout << "Initialized empty Git repository in " + fs::canonical(Globals::GitDir).string() << '\n';
 }
 
 void cmd_add(int argc, char* argv[])
@@ -991,5 +1016,8 @@ void cmd_reset(int argc, char* argv[])
 
 void cmd_test(int argc, char* argv[])
 {
-
+	fs::path path1, path2;
+	std::cin >> path1;
+	std::cin >> path2;
+	Filesystem::copy_directory(path1, path2, Filesystem::FILE_FLAG_SKIP_EXISTING | Filesystem::FILE_FLAG_RECURSIVE);
 }

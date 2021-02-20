@@ -21,6 +21,40 @@ inline void error(const std::string &msg)
 	exit(1);
 }
 
+inline void fatal(const char* fmt...)
+{
+	printf("fatal: ");
+	printf(fmt);
+	printf("\n");
+	exit(1);
+}
+
+inline void fatal(const std::string &msg)
+{
+	fatal(msg.c_str());
+}
+
+inline void fatal(const boost::format& msg)
+{
+	fatal(msg.str());
+}
+
+inline void warning(const char* fmt...)
+{
+	printf("warning: ");
+	printf(fmt);
+	printf("\n");
+}
+
+inline void warning(const std::string &msg)
+{
+	warning(msg.c_str());
+}
+
+inline void warning(const boost::format& msg)
+{
+	warning(msg.str());
+}
 inline void message(const char* fmt...)
 {
 	printf(fmt);

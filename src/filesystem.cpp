@@ -1,5 +1,6 @@
 #include <fstream>
 #include <filesystem>
+#include <iostream>
 
 #include <boost/filesystem.hpp>
 #include <boost/system/error_code.hpp>
@@ -14,19 +15,22 @@ namespace Filesystem
 	void set_readonly(const fs::path& path)
 	{
 		using boost::filesystem::perms;
-		boost::filesystem::permissions(path, perms::remove_perms | perms::owner_write | perms::group_write | perms::others_write);
+		boost::system::error_code ec;
+		boost::filesystem::permissions(path, perms::remove_perms | perms::owner_write | perms::group_write | perms::others_write, ec);
+		check_error_code(ec, path.string());
 	}
 
 
 	void create_directory(const fs::path &dir, int flags)
 	{
-		if (dir.empty())
-			return;
-
 		boost::system::error_code ec;
-		fs::create_directories(dir, ec);
-		if(ec.value() != boost::system::errc::success)
-			throw Exception(ec.message());
+
+		if (flags & Filesystem::FILE_FLAG_RECURSIVE)
+			fs::create_directories(dir, ec);
+		else
+			fs::create_directory(dir, ec);
+
+		check_error_code(ec, dir.string());
 		
 		if (flags & FILE_FLAG_HIDDEN)
 			set_hidden(dir.c_str());
@@ -37,10 +41,14 @@ namespace Filesystem
 		std::filesystem::copy_options options = std::filesystem::copy_options::none;
 		if (flags & FILE_FLAG_OVERWRITE)
 			options |= std::filesystem::copy_options::overwrite_existing;
+		if (flags & FILE_FLAG_SKIP_EXISTING)
+			options |= std::filesystem::copy_options::skip_existing;
 		if (flags & FILE_FLAG_RECURSIVE)
 			options |= std::filesystem::copy_options::recursive;
-		
-		std::filesystem::copy(src.string(), dest.string(), options);
+
+		std::error_code ec;
+		std::filesystem::copy(src.string(), dest.string(), options, ec);
+		check_error_code(ec, (boost::format("%1%, %2%") % src.string() % dest.string()).str());
 	}
 
 	std::string read_content(const fs::path &file)
@@ -85,9 +93,6 @@ namespace Filesystem
 		std::ofstream stream;
 		Filesystem::open(file, stream);
 
-		if (!stream)
-			throw Exception(boost::format("cannot open file: %1%") % file);
-
 		stream << content;
 		stream.close();
 
@@ -100,7 +105,7 @@ namespace Filesystem
 	void write_content(const fs::path& file, std::istream& in_stream, int flags)
 	{
 		if (!(flags & FILE_FLAG_OVERWRITE) && fs::exists(file))
-			throw FileExistsException(file);
+			throw Exception(boost::format("file exists: %1%") % file);
 
 		std::ofstream out_stream;
 		Filesystem::open(file, out_stream, flags);
@@ -142,7 +147,7 @@ namespace Filesystem
 		else
 			return false;
 	}
-	void make_sure_file_exists(const fs::path& file)
+	void check_file_exists(const fs::path& file)
 	{
 		std::ofstream stream(file.string(), std::ios_base::app);
 	}

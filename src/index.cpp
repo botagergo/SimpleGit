@@ -85,7 +85,7 @@ void update_index(const std::vector<fs::path>& files, int flags)
 
 	assert(files.size() > 0);
 
-	Filesystem::make_sure_file_exists(Globals::IndexFile);
+	Filesystem::check_file_exists(Globals::IndexFile);
 
 	std::ifstream in_stream;
 	Filesystem::open(Globals::IndexFile, in_stream);
@@ -172,7 +172,7 @@ void read_tree_into_index(const fs::path& index_file, const std::string& tree1_i
 	std::ifstream index_in_stream, tree1_in_stream, tree2_in_stream;
 	std::ofstream index_out_stream;
 
-	Filesystem::make_sure_file_exists(index_file);
+	Filesystem::check_file_exists(index_file);
 	Filesystem::open(index_file, index_in_stream);
 	Filesystem::open(tmp_index_file, index_out_stream);
 

@@ -135,3 +135,25 @@ std::string get_commit_message(const std::string& init)
 	boost::algorithm::trim(ret);
 	return ret;
 }
+
+void check_error_code(const boost::system::error_code& ec, const std::string& arg)
+{
+	if (ec)
+	{
+		std::string msg = ec.message();
+		if (!arg.empty())
+			msg += ": " + arg;
+		throw Exception(msg);
+	}
+}
+
+void check_error_code(const std::error_code& ec, const std::string& arg)
+{
+	if (ec)
+	{
+		std::string msg = ec.message();
+		if (!arg.empty())
+			msg += ": " + arg;
+		throw Exception(msg);
+	}
+}

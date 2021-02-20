@@ -66,10 +66,10 @@ int main(int argc, char* argv[])
 				try{
 					cmd->second(argc - 1, argv + 1);
 				} catch (const std::exception& e) {
-					error(e.what());
+					fatal(e.what());
 				}
 			else
-				error(std::string("unknown command: ") + command);
+				fatal(boost::format("'%1%' is not a git command") % command);
 		}
 
 		return 0;

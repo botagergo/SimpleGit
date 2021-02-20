@@ -89,7 +89,7 @@ std::string ObjectWriter::save()
 	if (Object(_id).exists())
 		return _id;
 
-	Filesystem::create_directory(Filesystem::get_object_dir(_id));
+	Filesystem::create_directory(Filesystem::get_object_dir(_id), Filesystem::FILE_FLAG_RECURSIVE);
 	std::string object_file = Filesystem::get_object_path(_id).string();
 	fs::copy(Globals::ObjectTmpFile, object_file);
 	Filesystem::set_hidden(object_file.c_str());
