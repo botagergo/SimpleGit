@@ -7,7 +7,6 @@
 #include <boost/program_options.hpp>
 #include <boost/format.hpp>
 #include <boost/algorithm/string/join.hpp>
-#include <boost/dll.hpp>
 
 #include "branch.h"
 #include "checkout.h"
@@ -66,38 +65,14 @@ void at_least_one_required(const po::variables_map& vm, const std::vector<std::s
 	throw Exception(boost::format("at least one of %1% is required") % boost::join(options, ", "));
 }
 
-
-
-void init_path_constants()
+void merge_variables_map(po::variables_map& dest, const po::variables_map& src)
 {
-	if (Globals::GitDir == fs::path())
+	for (auto it = src.begin(); it != src.end(); it++)
 	{
-		assert(false); // Globals::GitDir has to be initialized before running init_path_constants()!
+		dest.erase(it->first);
+		dest.insert(std::make_pair(it->first, it->second));
+		std::cout << it->first << ", " << it->second.as<fs::path>() << std::endl;
 	}
-
-	Globals::DefaultSimpleGitConfig = Globals::GitDir / "config";
-	const char* config = std::getenv("GIT_CONFIG");
-	if (config)
-		Globals::ConfigFile = Globals::GitDir / config;
-	else
-		Globals::ConfigFile = Globals::DefaultSimpleGitConfig;
-
-	Globals::GlobalConfigFile = get_home_directory() / ".sgitconfig";
-
-	Globals::ObjectDir = Globals::GitDir / Globals::ObjectDirName;
-	Globals::RefDir = Globals::GitDir / Globals::RefDirName;
-	Globals::TagDir = Globals::RefDir / Globals::TagDirName;
-	Globals::BranchDir = Globals::RefDir / Globals::BranchDirName;
-
-	Globals::IndexFile = Globals::GitDir / Globals::IndexFileName;
-	Globals::HeadFile = Globals::GitDir / Globals::HeadFileName;
-
-	Globals::CommitMessageTmpFile = Globals::GitDir / "COMMIT_EDITMSG";
-	Globals::ObjectTmpFile = Globals::GitDir / "OBJECT";
-	Globals::ExecutableDir = boost::dll::program_location().parent_path();
-	Globals::CommitMessageTemplateFile = "/usr/share/sgit/COMMIT_EDITMSG_template";
-
-	Globals::EditorCommand = get_git_editor();
 }
 
 void init_for_git_commands(const po::variables_map& vm, fs::path root_dir=fs::path())
@@ -122,7 +97,7 @@ void init_for_git_commands(const po::variables_map& vm, fs::path root_dir=fs::pa
 		}
 	}
 
-	init_path_constants();
+	Globals::init();
 
 	Config::init();
 
@@ -130,15 +105,17 @@ void init_for_git_commands(const po::variables_map& vm, fs::path root_dir=fs::pa
 		Globals::Verbose = true;
 }
 
-fs::path get_template_dir(const po::variables_map& vm)
+fs::path get_template_dir(const po::variables_map& vm_cmdline, const po::variables_map& vm_config)
 {
 	const char* template_dir_env;
-	if (vm.count("template"))
-		return vm["template"].as<fs::path>();
+	if (vm_cmdline.count("template"))
+		return vm_cmdline["template"].as<fs::path>();
 	else if (template_dir_env = std::getenv("GIT_TEMPLATE_DIR"))
 		return template_dir_env;
-	//TODO: init.templateDir config variable
-	else return Globals::DefaultTemplateDir;
+	else if (vm_config.count("init.templateDir"))
+		return vm_config["init.templateDir"].as<fs::path>();
+	else
+		return Globals::DefaultTemplateDir;
 }
 
 void initGit(fs::path root_dir=fs::path())
@@ -149,7 +126,7 @@ void initGit(fs::path root_dir=fs::path())
 	if (root_dir == fs::path())
 		throw Exception("not a git repository");
 
-	init_path_constants();
+	Globals::init();
 }
 
 ArgType get_arg_type(const std::string& arg)
@@ -165,6 +142,36 @@ ArgType get_arg_type(const std::string& arg)
 		return ArgType::Path;
 	else
 		throw InvalidArgumentException(arg);
+}
+
+po::variables_map read_config()
+{
+	po::options_description cfg_po;
+    cfg_po.add_options()
+    	("init.templateDir", po::value<fs::path>(), "The location of the template directory for repository initialization");
+
+	po::variables_map vm_ret;
+
+	if (!Globals::SystemConfigFile.empty())
+		try {
+			po::variables_map vm;
+			po::store(po::parse_config_file(Globals::SystemConfigFile.c_str(), cfg_po), vm);
+			merge_variables_map(vm_ret, vm);
+		} catch (...) {}
+	if (!Globals::SystemConfigFile.empty())
+		try {
+			po::variables_map vm;
+			po::store(po::parse_config_file(Globals::UserConfigFile.c_str(), cfg_po), vm);
+			merge_variables_map(vm_ret, vm);
+		} catch (...) {}
+	if (!Globals::SystemConfigFile.empty())
+		try {
+			po::variables_map vm;
+			po::store(po::parse_config_file(Globals::RepositoryConfigFile.c_str(), cfg_po), vm);
+			merge_variables_map(vm_ret, vm);
+		} catch (...) {}
+
+	return vm_ret;
 }
 
 void cmd_init(int argc, char* argv[])
@@ -193,6 +200,8 @@ void cmd_init(int argc, char* argv[])
 		std::cout << desc << std::endl;
 		return;
 	}
+
+	po::variables_map vm_config = read_config();
 
 	bool bare = vm["bare"].as<bool>();
 	bool separate_git_dir = !!vm.count("separate-git-dir");
@@ -233,9 +242,9 @@ void cmd_init(int argc, char* argv[])
 	Filesystem::create_directory(actual_git_dir, Filesystem::FILE_FLAG_RECURSIVE);
 
 	Globals::GitDir = actual_git_dir;
-	init_path_constants();
+	Globals::init();
 
-	fs::path template_dir = get_template_dir(vm);
+	fs::path template_dir = get_template_dir(vm, vm_config);
 
 	bool reinitialize = is_git_dir(Globals::GitDir);
 	init_git_dir(template_dir, reinitialize);
@@ -902,7 +911,7 @@ void cmd_config(int argc, char* argv[])
 
 	init_for_git_commands(vm);
 
-	Config::write(Globals::ConfigFile, vm["name"].as<std::string>(), vm["value"].as<std::string>());
+	Config::write(Globals::RepositoryConfigFile, vm["name"].as<std::string>(), vm["value"].as<std::string>());
 }
 
 void cmd_diff(int argc, char* argv[])

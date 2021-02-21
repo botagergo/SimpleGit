@@ -68,10 +68,12 @@ namespace Config
 	{
 		Globals::Config.clear();
 
-		if (fs::exists(Globals::GlobalConfigFile))
-			Config::read(Globals::Config, Globals::GlobalConfigFile);
-		if (fs::exists(Globals::ConfigFile))
-			Config::read(Globals::Config, Globals::ConfigFile);
+		if (fs::exists(Globals::SystemConfigFile))
+			Config::read(Globals::Config, Globals::SystemConfigFile);
+		if (fs::exists(Globals::UserConfigFile))
+			Config::read(Globals::Config, Globals::UserConfigFile);
+		if (fs::exists(Globals::RepositoryConfigFile))
+			Config::read(Globals::Config, Globals::RepositoryConfigFile);
 
 		if (Globals::Config.find("user.name") == Globals::Config.end())
 			Globals::Config["user.name"] = get_username();

@@ -21,7 +21,9 @@ namespace Globals
 	extern fs::path			GitCoreDir;
 	extern fs::path			DefaultTemplateDir;
 
-	extern fs::path			DefaultSimpleGitConfig;
+	extern fs::path			RepositoryConfigFile;
+	extern fs::path			UserConfigFile;
+	extern fs::path			SystemConfigFile;
 
 	extern fs::path			GitDir;
 
@@ -31,8 +33,6 @@ namespace Globals
 	extern fs::path			BranchDir;
 
 	extern fs::path			IndexFile;
-	extern fs::path			ConfigFile;
-	extern fs::path			GlobalConfigFile;
 	extern fs::path			HeadFile;
 
 	extern fs::path			CommitMessageTmpFile;
@@ -51,4 +51,6 @@ namespace Globals
 	extern std::string		CommitMessagePromptString;
 
 	extern std::string		EditorCommand;
+
+	void init();
 };

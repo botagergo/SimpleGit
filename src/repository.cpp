@@ -43,7 +43,7 @@ void init_git_dir(const fs::path& template_dir, bool reinitialize)
     if (!reinitialize)
     {
         // TODO: create HEAD
-        Filesystem::write_content(Globals::ConfigFile, "", Filesystem::FILE_FLAG_OVERWRITE);
+        Filesystem::write_content(Globals::RepositoryConfigFile, "", Filesystem::FILE_FLAG_OVERWRITE);
 	    Filesystem::create_directory(Globals::ObjectDir);
 	    Filesystem::create_directory(Globals::RefDir);
 	    Filesystem::create_directory(Globals::TagDir);
