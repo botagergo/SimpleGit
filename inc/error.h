@@ -7,6 +7,12 @@
 
 #include "defs.h"
 
+#define FATAL std::cerr << "fatal: "
+#define WARNING std::cerr << "warning: "
+#define MESSAGE \
+		if (Globals::Quiet) {} \
+    	else std::cout
+
 inline void error(const char* fmt...)
 {
 	printf("error: ");

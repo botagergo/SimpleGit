@@ -43,6 +43,7 @@ namespace Globals
 	const size_t		IdPrefixLength = 2;
 	const size_t		MaxObjectHeaderSize = 32;
 
+	bool				Quiet = false;
 	bool				Debug = false;
 	bool				Verbose = false;
 
@@ -55,6 +56,8 @@ namespace Globals
 
 	void init()
 	{
+		const char* env;
+
 		if (Globals::GitDir == fs::path())
 		{
 			assert(false); // Globals::GitDir has to be initialized before running init_path_constants()!
@@ -62,7 +65,11 @@ namespace Globals
 
 		Globals::RepositoryConfigFile = Globals::GitDir / "config";
 
-		Globals::ObjectDir = Globals::GitDir / Globals::ObjectDirName;
+		if (env = std::getenv("GIT_OBJECT_DIRECTORY"))
+			Globals::ObjectDir = env;
+		else
+			Globals::ObjectDir = Globals::GitDir / Globals::ObjectDirName;
+
 		Globals::RefDir = Globals::GitDir / Globals::RefDirName;
 		Globals::TagDir = Globals::RefDir / Globals::TagDirName;
 		Globals::BranchDir = Globals::RefDir / Globals::BranchDirName;

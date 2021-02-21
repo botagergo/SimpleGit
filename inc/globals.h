@@ -43,6 +43,7 @@ namespace Globals
 	extern const size_t		IdPrefixLength;
 	extern const size_t		MaxObjectHeaderSize;
 
+	extern bool				Quiet;
 	extern bool				Debug;
 	extern bool				Verbose;
 

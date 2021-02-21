@@ -66,10 +66,14 @@ int main(int argc, char* argv[])
 				try{
 					cmd->second(argc - 1, argv + 1);
 				} catch (const std::exception& e) {
-					fatal(e.what());
+					FATAL << e.what() << std::endl;
+					std::exit(1);
 				}
 			else
-				fatal(boost::format("'%1%' is not a git command") % command);
+			{
+				FATAL << command << " is not a git command" << std::endl;
+				std::exit(1);
+			}
 		}
 
 		return 0;

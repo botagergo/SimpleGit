@@ -71,7 +71,6 @@ void merge_variables_map(po::variables_map& dest, const po::variables_map& src)
 	{
 		dest.erase(it->first);
 		dest.insert(std::make_pair(it->first, it->second));
-		std::cout << it->first << ", " << it->second.as<fs::path>() << std::endl;
 	}
 }
 
@@ -182,7 +181,8 @@ void cmd_init(int argc, char* argv[])
 	po::options_description desc;
 	desc.add_options()
 	("help,h", po::value<bool>()->implicit_value(true)->zero_tokens(), "prints command usage")
-	("bare", po::value<bool>()->implicit_value(true)->zero_tokens()->default_value(false), "initialize a bare repository")
+	("quiet,q", po::value<bool>()->implicit_value(true)->zero_tokens(), "Print only error and warning messages")
+	("bare", po::value<bool>()->implicit_value(true)->zero_tokens(), "initialize a bare repository")
 	("template", po::value<fs::path>(), "the directory to be used as the template for the repository")
 	("separate-git-dir", po::value<fs::path>(), "the directory for the actual repository")
 	("directory", po::value<fs::path>(), "the directory in which to initialise the repository")
@@ -201,11 +201,15 @@ void cmd_init(int argc, char* argv[])
 		return;
 	}
 
+	if (vm.count("quiet"))
+	{
+		Globals::Quiet = true;
+	}
+
 	po::variables_map vm_config = read_config();
 
-	bool bare = vm["bare"].as<bool>();
+	bool bare = vm.count("bare");
 	bool separate_git_dir = !!vm.count("separate-git-dir");
-
 	// The repository is created here
 	// If separate-git-dir is specified, it is a file containing a reference to the actual repository
 	fs::path git_dir;
@@ -253,9 +257,9 @@ void cmd_init(int argc, char* argv[])
 		write_git_dir_ref(fs::canonical(actual_git_dir), git_dir);
 
 	if (reinitialize)
-		std::cout << "Reinitialized existing Git repository in " + fs::canonical(Globals::GitDir).string() << '\n';
+		MESSAGE << "Reinitialized existing Git repository in " + fs::canonical(Globals::GitDir).string() << '\n';
 	else
-		std::cout << "Initialized empty Git repository in " + fs::canonical(Globals::GitDir).string() << '\n';
+		MESSAGE << "Initialized empty Git repository in " + fs::canonical(Globals::GitDir).string() << '\n';
 }
 
 void cmd_add(int argc, char* argv[])
