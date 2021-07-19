@@ -6,6 +6,7 @@ RELEASEDIR = $(BINDIR)/release
 OBJDIR = obj
 EXEC = sgit
 PACKAGE_NAME = sgit_1.0-1
+CPP_VERSION = c++17
 
 BOOST_LIB_DIR = /usr/lib
 BOOST_LIB = boost_filesystem boost_system boost_program_options
@@ -22,8 +23,8 @@ RM = rm -rf
 
 DISABLE_WARNINGS = -Wno-format-security -Wno-format-contains-nul
 
-CXXFLAGS = $(INCDIR:%=-I%) $(DISABLE_WARNINGS) -std=c++17
-CPPFLAGS = -L$(BOOST_LIB_DIR) $(LIB:%=-l%) -std=c++17
+CXXFLAGS = $(INCDIR:%=-I%) $(DISABLE_WARNINGS) -std=$(CPP_VERSION)
+CPPFLAGS = -L$(BOOST_LIB_DIR) $(LIB:%=-l%) -std=$(CPP_VERSION)
 
 DEBUG ?= 1
 ifeq ($(DEBUG),1)
@@ -37,8 +38,6 @@ else
 endif
 
 CXXFLAGS += -MMD 
-test:
-	echo $(CXXFLAGS)
 
 .PHONY: build rebuild clean install create_directories
 
@@ -62,12 +61,12 @@ reinstall: rebuild install
 
 $(TARGET): $(OBJS)
 	@mkdir -p `dirname $@`
-	@echo linking...
+	@echo linking ...
 	@$(CXX) -o $@ $^ $(CPPFLAGS)
 
 $(OBJDIR)/%.o: $(SRCDIR)/%.cpp
 	@mkdir -p obj
-	@echo compiling $<...
+	@echo compiling $< ...
 	@$(CXX) -c -o $@ $< $(CXXFLAGS)
 
 linux.h:

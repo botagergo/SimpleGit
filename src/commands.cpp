@@ -294,8 +294,8 @@ void cmd_add(int argc, char* argv[])
 	else
 	{
 		std::vector<fs::path> files = vm["files"].as<std::vector<fs::path>>();
-
 		std::sort(files.begin(), files.end());
+
 		update_index(files, UPDATE_INDEX_MODIFY | UPDATE_INDEX_ADD | UPDATE_INDEX_REMOVE_IF_DELETED);
 	}
 }
@@ -312,6 +312,7 @@ void cmd_update_index(int argc, char* argv[])
 		("add", po::value<bool>()->implicit_value(true)->zero_tokens(), "add files even if not in index")
 		("remove", po::value<bool>()->implicit_value(true)->zero_tokens(), "remove files if missing")
 		("force-remove", po::value<bool>()->implicit_value(true)->zero_tokens(), "remove files even if not missing")
+		("files", po::value<std::vector<fs::path>>(), "Files to update")
 		;
 
 	po::variables_map vm;
@@ -326,15 +327,17 @@ void cmd_update_index(int argc, char* argv[])
 		return;
 	}
 
+	conflicting_options(vm, "force-remove", "add");
+
 	init_for_git_commands(vm);
 
 	int flags = UPDATE_INDEX_MODIFY;
 
 	if (vm.count("add"))
-		flags = UPDATE_INDEX_MODIFY | UPDATE_INDEX_ADD;
-	else if (vm.count("remove"))
-		flags = UPDATE_INDEX_REMOVE;
-	else if (vm.count("force-remove"))
+		flags |= UPDATE_INDEX_ADD;
+	if (vm.count("remove"))
+		flags |= UPDATE_INDEX_REMOVE_IF_DELETED;
+	if (vm.count("force-remove"))
 		flags = UPDATE_INDEX_FORCE_REMOVE;
 
 	update_index(vm["files"].as<std::vector<fs::path>>(), flags);

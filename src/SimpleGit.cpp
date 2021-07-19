@@ -38,11 +38,6 @@ std::map<std::string, void (*)(int argc, char* argv[])> command_map {
 	{"test", cmd_test},
 };
 
-void clear_filesystem()
-{
-	fs::remove_all(Globals::GitDir);
-}
-
 int test()
 {
 	return 0;

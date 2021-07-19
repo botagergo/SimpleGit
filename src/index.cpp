@@ -45,22 +45,30 @@ bool process_index_record(const IndexRecord& record, const fs::path& file, std::
 
 	if (record.path == file)
 	{
-		if ((flags & UPDATE_INDEX_MODIFY) && fs::exists(file))
+		if (fs::exists(file))
 		{
-			// we check the stat information to determine whether the file is newer than that in the index
-			struct stat s = Filesystem::get_stat(file);
-			if (s.st_mtime > record.mtime)
-				output << create_index_record(file) << '\n';
+			if (flags & UPDATE_INDEX_MODIFY)
+			{
+				// we check the stat information to determine whether the file is newer than that in the index
+				struct stat s = Filesystem::get_stat(file);
+				if (s.st_mtime > record.mtime)
+					output << create_index_record(file) << '\n';
+				else
+					output << record << '\n';
+			}
+			else if (flags & UPDATE_INDEX_FORCE_REMOVE)
+				{}
 			else
-				output << record << '\n';
+				throw Exception(boost::format("file is already in the index: %1%") % file);
 		}
-		else if (!(flags & UPDATE_INDEX_MODIFY) && fs::exists(file))
-			throw Exception(boost::format("file is already in the index: %1%") % file);
-		else if (!(flags & UPDATE_INDEX_REMOVE_IF_DELETED) && !fs::exists(file))
-			throw Exception(boost::format("file doesn't exist: %1%") % file);
-		else if ((flags & UPDATE_INDEX_FORCE_REMOVE) != UPDATE_INDEX_FORCE_REMOVE && fs::exists(record.path))
-			throw Exception(boost::format("cannot delete from index, file exists: %1%") % file);
-		// else just delete the file
+		else
+		{
+			if (flags & UPDATE_INDEX_REMOVE_IF_DELETED)
+				{}
+			else
+				throw Exception(boost::format("file doesn't exist: %1%") % file);
+
+		}
 
 		updated = true;
 	}
@@ -69,7 +77,7 @@ bool process_index_record(const IndexRecord& record, const fs::path& file, std::
 		if (flags & UPDATE_INDEX_ADD)
 			output << create_index_record(file) << '\n';
 		else
-			throw Exception(boost::format("file is not in the index: %1%") % file);
+			throw FileNotInIndexException(file);
 	}
 
 	return updated;
@@ -79,7 +87,8 @@ void update_index(const std::vector<fs::path>& files, int flags)
 {
 #ifdef _DEBUG
 	// check for invalid flag combination
-	if ((flags & UPDATE_INDEX_REMOVE) && (flags & UPDATE_INDEX_MODIFY))
+	if ((flags & UPDATE_INDEX_REMOVE) && (flags & UPDATE_INDEX_MODIFY)
+		|| (flags & UPDATE_INDEX_FORCE_REMOVE) && (flags & UPDATE_INDEX_ADD))
 		assert(false);
 #endif
 

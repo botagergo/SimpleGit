@@ -3,8 +3,11 @@
 #include <string>
 
 #include <boost/filesystem/path.hpp>
+#include <boost/program_options.hpp>
 
 #include "defs.h"
+
+namespace po = boost::program_options;
 
 std::string get_hash(const char* text, size_t size);
 std::string get_file_hash(const fs::path &file);
@@ -32,3 +35,5 @@ std::string get_commit_message(const std::string& init = {});
 
 void check_error_code(const boost::system::error_code& ec, const std::string& arg="");
 void check_error_code(const std::error_code& ec, const std::string& arg="");
+
+void merge_variables_map(po::variables_map& dest, const po::variables_map& src);

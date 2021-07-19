@@ -108,7 +108,7 @@ public:
 class FileNotInIndexException : public Exception
 {
 public:
-	FileNotInIndexException(const fs::path& path) : Exception(boost::format("file not in index: %1%") % path.string()) {}
+	FileNotInIndexException(const fs::path& path) : Exception(boost::format("file is not in the index: %1%") % path.string()) {}
 };
 
 class FileAlreadyInIndexException : public Exception

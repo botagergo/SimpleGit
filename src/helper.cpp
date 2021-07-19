@@ -157,3 +157,12 @@ void check_error_code(const std::error_code& ec, const std::string& arg)
 		throw Exception(msg);
 	}
 }
+
+void merge_variables_map(po::variables_map& dest, const po::variables_map& src)
+{
+	for (auto it = src.begin(); it != src.end(); it++)
+	{
+		//dest.erase(it->first);
+		dest.insert_or_assign(it->first, it->second);
+	}
+}
