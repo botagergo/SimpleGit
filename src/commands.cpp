@@ -65,15 +65,6 @@ void at_least_one_required(const po::variables_map& vm, const std::vector<std::s
 	throw Exception(boost::format("at least one of %1% is required") % boost::join(options, ", "));
 }
 
-void merge_variables_map(po::variables_map& dest, const po::variables_map& src)
-{
-	for (auto it = src.begin(); it != src.end(); it++)
-	{
-		dest.erase(it->first);
-		dest.insert(std::make_pair(it->first, it->second));
-	}
-}
-
 void init_for_git_commands(const po::variables_map& vm, fs::path root_dir=fs::path())
 {
 	const char* git_dir_env = std::getenv("GIT_DIR");
@@ -98,23 +89,23 @@ void init_for_git_commands(const po::variables_map& vm, fs::path root_dir=fs::pa
 
 	Globals::init();
 
-	Config::init();
-
 	if (vm.count("verbose"))
 		Globals::Verbose = true;
 }
 
-fs::path get_template_dir(const po::variables_map& vm_cmdline, const po::variables_map& vm_config)
+fs::path get_template_dir(const po::variables_map& vm_cmdline, const Config& config)
 {
+	fs::path template_dir;
 	const char* template_dir_env;
+
 	if (vm_cmdline.count("template"))
-		return vm_cmdline["template"].as<fs::path>();
+		template_dir = vm_cmdline["template"].as<fs::path>();
 	else if (template_dir_env = std::getenv("GIT_TEMPLATE_DIR"))
-		return template_dir_env;
-	else if (vm_config.count("init.templateDir"))
-		return vm_config["init.templateDir"].as<fs::path>();
-	else
-		return Globals::DefaultTemplateDir;
+		template_dir = template_dir_env;
+	else if (!config.try_get("init.templateDir", template_dir))
+		template_dir = Globals::DefaultTemplateDir;
+
+	return template_dir;
 }
 
 void initGit(fs::path root_dir=fs::path())
@@ -141,36 +132,6 @@ ArgType get_arg_type(const std::string& arg)
 		return ArgType::Path;
 	else
 		throw InvalidArgumentException(arg);
-}
-
-po::variables_map read_config()
-{
-	po::options_description cfg_po;
-    cfg_po.add_options()
-    	("init.templateDir", po::value<fs::path>(), "The location of the template directory for repository initialization");
-
-	po::variables_map vm_ret;
-
-	if (!Globals::SystemConfigFile.empty())
-		try {
-			po::variables_map vm;
-			po::store(po::parse_config_file(Globals::SystemConfigFile.c_str(), cfg_po), vm);
-			merge_variables_map(vm_ret, vm);
-		} catch (...) {}
-	if (!Globals::SystemConfigFile.empty())
-		try {
-			po::variables_map vm;
-			po::store(po::parse_config_file(Globals::UserConfigFile.c_str(), cfg_po), vm);
-			merge_variables_map(vm_ret, vm);
-		} catch (...) {}
-	if (!Globals::SystemConfigFile.empty())
-		try {
-			po::variables_map vm;
-			po::store(po::parse_config_file(Globals::RepositoryConfigFile.c_str(), cfg_po), vm);
-			merge_variables_map(vm_ret, vm);
-		} catch (...) {}
-
-	return vm_ret;
 }
 
 void cmd_init(int argc, char* argv[])
@@ -205,8 +166,6 @@ void cmd_init(int argc, char* argv[])
 	{
 		Globals::Quiet = true;
 	}
-
-	po::variables_map vm_config = read_config();
 
 	bool bare = vm.count("bare");
 	bool separate_git_dir = !!vm.count("separate-git-dir");
@@ -248,7 +207,8 @@ void cmd_init(int argc, char* argv[])
 	Globals::GitDir = actual_git_dir;
 	Globals::init();
 
-	fs::path template_dir = get_template_dir(vm, vm_config);
+	Config config = Config::create({Globals::RepositoryConfigFile}, Config::CREATE_IF_NOT_EXIST);
+	fs::path template_dir = get_template_dir(vm, config);
 
 	bool reinitialize = is_git_dir(Globals::GitDir);
 	init_git_dir(template_dir, reinitialize);
@@ -373,6 +333,8 @@ void cmd_commit(int argc, char* argv[])
 
 	init_for_git_commands(vm);
 
+	Config config = Config::create({Globals::RepositoryConfigFile});
+
 	// can't commit if index is empty
 	if (IndexReader(Globals::IndexFile).end())
 		throw Exception("no changes added to commit");
@@ -390,10 +352,10 @@ void cmd_commit(int argc, char* argv[])
 	{
 		try
 		{
-			commit.committer = UserInfo(Config::get("user.name"), Config::get("user.email"));
+			commit.committer = UserInfo(config.get<std::string>("user.name"), config.get<std::string>("user.email"));
 			commit.author = commit.committer;
 		}
-		catch (const ConfigNotFoundException&)
+		catch (const Config::ConfigParameterNotFoundException&)
 		{
 			error("user name or email not configured");
 		}
@@ -918,7 +880,15 @@ void cmd_config(int argc, char* argv[])
 
 	init_for_git_commands(vm);
 
-	Config::write(Globals::RepositoryConfigFile, vm["name"].as<std::string>(), vm["value"].as<std::string>());
+	po::variables_map vm_config;
+	const po::options_description& config_desc = Config::get_config_description();
+	po::store(po::basic_command_line_parser(std::vector({"--" + vm["name"].as<std::string>(), vm["value"].as<std::string>()}))
+		.options(config_desc)
+		.positional(po::positional_options_description()).run(), vm_config);
+	po::notify(vm_config);
+
+	Config config = Config::create({Globals::RepositoryConfigFile});
+	config.set(Globals::RepositoryConfigFile, vm_config);
 }
 
 void cmd_diff(int argc, char* argv[])

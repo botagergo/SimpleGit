@@ -253,12 +253,6 @@ public:
 	HeadDoesntExistException() : Exception("head doesn't exist") {}
 };
 
-class ConfigNotFoundException : public Exception
-{
-public:
-	ConfigNotFoundException(const std::string& name) : Exception(boost::format("config name not found: %1%") % name) {}
-};
-
 class AmbiguousArgumentException : public Exception
 {
 public:
