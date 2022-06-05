@@ -6,13 +6,12 @@
 #include <boost/filesystem.hpp>
 
 #include "defs.h"
-#include "filesystem.h"
-#include "globals.h"
 
 class Object;
 class BlobReader;
 class TreeReader;
 class CommitReader;
+class Repository;
 
 struct ObjectHeader
 {
@@ -77,29 +76,15 @@ protected:
 class ObjectWriterStreambuf : public std::streambuf
 {
 public:
-	ObjectWriterStreambuf()
-	{
-		_buf = (char*)malloc(_start_len);
-		setp(_buf + Globals::MaxObjectHeaderSize, _buf + _start_len - Globals::MaxObjectHeaderSize);
-	}
+	ObjectWriterStreambuf();
 
 	// returns the length of the buffer, not including the space reserved for the header
-	uint64_t content_length() const
-	{
-		return pptr() - _buf - Globals::MaxObjectHeaderSize;
-	}
+	uint64_t content_length() const;
 
 	// returns a pointer to the beginning of the buffer, including the space reserved for the header
-	char* str()
-	{
-		*pptr() = 0;
-		return _buf;
-	}
+	char* str();
 
-	~ObjectWriterStreambuf()
-	{
-		free(_buf);
-	}
+	~ObjectWriterStreambuf();
 
 private:
 	const static size_t _start_len = 2048;
@@ -113,7 +98,8 @@ class ObjectWriter
 	template <typename T>
 	friend ObjectWriter& operator<< (ObjectWriter& writer, const T& val);
 public:
-	ObjectWriter(const std::string& object_kind) : _object_kind(object_kind), _stream(&_buf) {}
+	ObjectWriter(const Repository& repo, const std::string& object_kind)
+		: _repo(repo), _object_kind(object_kind), _stream(&_buf) {}
 
 	~ObjectWriter() { save(); }
 	std::string save();
@@ -126,6 +112,7 @@ private:
 	std::string				_id;
 	bool					_saved = false;
 	std::string				_object_kind;
+	const Repository&		_repo;
 };
 
 template <typename T>
@@ -142,10 +129,15 @@ ObjectWriter&& operator<< (ObjectWriter&& writer, const T& val)
 	return std::move(writer);
 }
 
+fs::path			get_object_path(const Repository& repo, const std::string& id);
+fs::path			get_object_dir(const Repository& repo, const std::string& id);
+
+
 class Object
 {
 public:
-	Object(const std::string& id) : _id(id), _path(Filesystem::get_object_path(id)) {}
+	Object(const Repository& repo, const std::string& id) :
+		_repo(repo), _id(id), _path(get_object_path(repo, id)) {}
 
 	bool				exists() const { return fs::exists(_path); }
 	const std::string&	id() const { return _id; }
@@ -161,5 +153,8 @@ public:
 private:
 	std::string			_id;
 	fs::path			_path;
+
+	const Repository&   _repo;
+
 	mutable ObjectData	_data;
 };

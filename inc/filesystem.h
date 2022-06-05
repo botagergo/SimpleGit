@@ -47,9 +47,6 @@ namespace Filesystem
 	void write_content(const fs::path& file, std::istream& in_stream, int flags=0);
 	void write_content(std::ostream& out_stream, std::istream& in_stream);
 
-	fs::path get_object_path(const std::string& id);
-	fs::path get_object_dir(const std::string& id);
-
 	bool is_prefix(const fs::path& prefix, const fs::path& path);
 
 	void check_file_exists(const fs::path& file);

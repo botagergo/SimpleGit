@@ -13,6 +13,7 @@
 #include "helper.h"
 #include "index.h"
 #include "index_two_tree_iterator.h"
+#include "repository.h"
 #include "tree.h"
 
 std::ostream& operator<<(std::ostream& ostream, const IndexRecord& record)
@@ -29,17 +30,28 @@ std::istream& operator>>(std::istream& istream, IndexRecord& record)
 	return ret;
 }
 
-IndexRecord create_index_record(const fs::path& file)
+IndexReader::IndexReader(const fs::path& index_file)
+{
+	if (!fs::exists(index_file))
+		_end = true;
+	else
+	{
+		Filesystem::open(index_file, _index_in);
+		next();
+	}
+}
+
+IndexRecord create_index_record(const Repository& repo, const fs::path& file)
 {
 	IndexRecord record;
-	record.id = write_blob_from_file(file);
+	record.id = write_blob_from_file(repo, file);
 	record.path = file;
 	record.mtime = Filesystem::get_stat(file).st_mtime;
 	record.mode = "100644";
 	return record;
 }
 
-bool process_index_record(const IndexRecord& record, const fs::path& file, std::ostream& output, int flags)
+bool process_index_record(const Repository& repo, const IndexRecord& record, const fs::path& file, std::ostream& output, int flags)
 {
 	bool updated = false;
 
@@ -52,7 +64,7 @@ bool process_index_record(const IndexRecord& record, const fs::path& file, std::
 				// we check the stat information to determine whether the file is newer than that in the index
 				struct stat s = Filesystem::get_stat(file);
 				if (s.st_mtime > record.mtime)
-					output << create_index_record(file) << '\n';
+					output << create_index_record(repo, file) << '\n';
 				else
 					output << record << '\n';
 			}
@@ -75,7 +87,7 @@ bool process_index_record(const IndexRecord& record, const fs::path& file, std::
 	else if (file < record.path)
 	{
 		if (flags & UPDATE_INDEX_ADD)
-			output << create_index_record(file) << '\n';
+			output << create_index_record(repo, file) << '\n';
 		else
 			throw FileNotInIndexException(file);
 	}
@@ -83,7 +95,7 @@ bool process_index_record(const IndexRecord& record, const fs::path& file, std::
 	return updated;
 }
 
-void update_index(const std::vector<fs::path>& files, int flags)
+void update_index(const Repository& repo, const std::vector<fs::path>& files, int flags)
 {
 #ifdef _DEBUG
 	// check for invalid flag combination
@@ -94,10 +106,10 @@ void update_index(const std::vector<fs::path>& files, int flags)
 
 	assert(files.size() > 0);
 
-	Filesystem::check_file_exists(Globals::IndexFile);
+	Filesystem::check_file_exists(repo.indexFile);
 
 	std::ifstream in_stream;
-	Filesystem::open(Globals::IndexFile, in_stream);
+	Filesystem::open(repo.indexFile, in_stream);
 
 	std::stringstream output;
 	IndexRecord record;
@@ -120,7 +132,7 @@ void update_index(const std::vector<fs::path>& files, int flags)
 		{
 			// process_index_record returns true, if the current file matches the current index record,
 			// and the record was modified, in which case we don't output it again
-			updated |= process_index_record(record, *curr_file, (std::ostream&)output, flags);
+			updated |= process_index_record(repo, record, *curr_file, (std::ostream&)output, flags);
 			curr_file++;
 		}
 
@@ -138,7 +150,7 @@ void update_index(const std::vector<fs::path>& files, int flags)
 		{
 			while (curr_file != files.end())
 			{
-				output << create_index_record(*curr_file) << '\n';
+				output << create_index_record(repo, *curr_file) << '\n';
 				curr_file++;
 			}
 		}
@@ -147,12 +159,12 @@ void update_index(const std::vector<fs::path>& files, int flags)
 	}
 
 	in_stream.close();
-	Filesystem::write_content(Globals::IndexFile, (std::istream&)output, Filesystem::FILE_FLAG_OVERWRITE);
+	Filesystem::write_content(repo.indexFile, (std::istream&)output, Filesystem::FILE_FLAG_OVERWRITE);
 }
 
-void read_tree_into_index(std::ostream& out_stream, const std::string& tree_id)
+void read_tree_into_index(const Repository& repo, std::ostream& out_stream, const std::string& tree_id)
 {
-	auto tree_reader = Object(tree_id).get_tree_reader();
+	auto tree_reader = Object(repo, tree_id).get_tree_reader();
 
 	TreeRecord record;
 	while (*tree_reader >> record)
@@ -162,18 +174,18 @@ void read_tree_into_index(std::ostream& out_stream, const std::string& tree_id)
 			out_stream << IndexRecord(record.id, record.path, get_time_t_now(), record.mode) << '\n';
 		}
 		else
-			read_tree_into_index(out_stream, record.id);
+			read_tree_into_index(repo, out_stream, record.id);
 	}
 }
 
-void read_tree_into_index(const fs::path& index_file, const std::string& tree_id)
+void read_tree_into_index(const Repository& repo, const fs::path& index_file, const std::string& tree_id)
 {
 	std::ofstream out_stream;
 	Filesystem::open(index_file, out_stream);
-	read_tree_into_index(out_stream, tree_id);
+	read_tree_into_index(repo, out_stream, tree_id);
 }
 
-void read_tree_into_index(const fs::path& index_file, const std::string& tree1_id, const std::string& tree2_id)
+void read_tree_into_index(const Repository& repo, const fs::path& index_file, const std::string& tree1_id, const std::string& tree2_id)
 {
 	bool clean = true; //todo
 	fs::path tmp_index_file = index_file.string() + "_TMP";
@@ -185,8 +197,8 @@ void read_tree_into_index(const fs::path& index_file, const std::string& tree1_i
 	Filesystem::open(index_file, index_in_stream);
 	Filesystem::open(tmp_index_file, index_out_stream);
 
-	auto tree1_reader = Object(tree1_id).get_tree_reader();
-	auto tree2_reader = Object(tree2_id).get_tree_reader();
+	auto tree1_reader = Object(repo, tree1_id).get_tree_reader();
+	auto tree2_reader = Object(repo, tree2_id).get_tree_reader();
 
 	IndexTwoTreeIterator<std::ifstream, TreeReader, TreeReader> iter(index_in_stream, *tree1_reader, *tree2_reader);
 	for (;!iter.end(); iter.next())

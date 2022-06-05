@@ -6,25 +6,27 @@
 
 #include "blob.h"
 #include "diff.h"
+#include "filesystem.h"
+#include "globals.h"
 #include "index.h"
 #include "object.h"
 #include "tree.h"
 #include "two_tree_iterator.h"
 
-bool has_diff(const IndexRecord& record)
+bool has_diff(const Repository& repo, const IndexRecord& record)
 {
 	if (!fs::exists(record.path))
 		return true;
 	else if (record.mtime == Filesystem::get_stat(record.path).st_mtime)
 		return false;
 	else
-		return Diff(Object(record.id).get_blob_reader()->read_lines(), Filesystem::read_lines(record.path)).calculate();
+		return Diff(Object(repo, record.id).get_blob_reader()->read_lines(), Filesystem::read_lines(record.path)).calculate();
 }
 
-void diff_tree(const std::string& tree1_id, const std::string& tree2_id)
+void diff_tree(const Repository& repo, const std::string& tree1_id, const std::string& tree2_id)
 {
-	auto tree1Reader = Object(tree1_id).get_tree_reader();
-	auto tree2Reader = Object(tree2_id).get_tree_reader();
+	auto tree1Reader = Object(repo, tree1_id).get_tree_reader();
+	auto tree2Reader = Object(repo, tree2_id).get_tree_reader();
 
 	TwoTreeIterator<TreeReader, TreeReader> iter(*tree1Reader, *tree2Reader);
 	for (; !iter.end(); iter.next())
@@ -33,8 +35,8 @@ void diff_tree(const std::string& tree1_id, const std::string& tree2_id)
 		{
 			if (iter.tree1().kind == "blob" && iter.tree2().kind == "blob")
 			{
-				Diff d(Object(iter.tree1().id).get_blob_reader()->read_lines(),
-					Object(iter.tree2().id).get_blob_reader()->read_lines());
+				Diff d(Object(repo, iter.tree1().id).get_blob_reader()->read_lines(),
+					Object(repo, iter.tree2().id).get_blob_reader()->read_lines());
 
 				if (d.calculate())
 				{
@@ -43,7 +45,7 @@ void diff_tree(const std::string& tree1_id, const std::string& tree2_id)
 				}
 			}
 			else if (iter.tree1().kind == "tree" && iter.tree2().kind == "tree")
-				diff_tree(iter.tree1().id, iter.tree2().id);
+				diff_tree(repo, iter.tree1().id, iter.tree2().id);
 			else
 				assert(false); // TODO
 		}
@@ -61,7 +63,7 @@ void diff_tree(const std::string& tree1_id, const std::string& tree2_id)
 	}
 }
 
-void diff_index(const fs::path& index_file, const std::vector<fs::path>& files)
+void diff_index(const Repository& repo, const fs::path& index_file, const std::vector<fs::path>& files)
 {
 	std::ifstream index_in_stream;
 	Filesystem::open(index_file, index_in_stream);
@@ -78,7 +80,7 @@ void diff_index(const fs::path& index_file, const std::vector<fs::path>& files)
 			}
 			else if (Filesystem::get_stat(record.path).st_mtime != record.mtime)
 			{
-				Diff d(Object(record.id).get_blob_reader()->read_lines(),
+				Diff d(Object(repo, record.id).get_blob_reader()->read_lines(),
 					Filesystem::read_lines(record.path));
 
 				if (d.calculate())

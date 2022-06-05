@@ -81,15 +81,6 @@ private:
 	std::string _name;
 };
 
-class InvalidReferenceException : public Exception
-{
-public:
-	InvalidReferenceException(const std::string& ref) : Exception(boost::format("invalid reference: %1%") % ref), _ref(ref) {}
-
-private:
-	std::string _ref;
-};
-
 class NotBlobException : public Exception
 {
 public:
@@ -102,7 +93,7 @@ private:
 class IndexFileNotFoundException : public Exception
 {
 public:
-	IndexFileNotFoundException() : Exception(boost::format("index file not found: %1%") % Globals::IndexFile.generic_string()) {}
+	IndexFileNotFoundException(const fs::path& index_file) : Exception(boost::format("index file not found: %1%") % index_file) {}
 };
 
 class FileNotInIndexException : public Exception

@@ -58,6 +58,15 @@ void Config::write() {
 	}
 }
 
+void Config::merge_variables_map(po::variables_map& dest, const po::variables_map& src)
+{
+	for (auto it = src.begin(); it != src.end(); it++)
+	{
+		//dest.erase(it->first);
+		dest.insert_or_assign(it->first, it->second);
+	}
+}
+
 std::optional<po::variables_map>& Config::get_vm(const fs::path& config_file) {
 	auto it = data.find(config_file);
 	if (it != data.end()) {
@@ -124,8 +133,8 @@ const po::options_description& Config::get_config_description() {
 		po::options_description cfg_od;
 
 		cfg_od.add_options()
-			("user.name", po::value<fs::path>(), "The name of the git user")
-			("user.email", po::value<fs::path>(), "The email of the git user")
+			("user.name", po::value<std::string>(), "The name of the git user")
+			("user.email", po::value<std::string>(), "The email of the git user")
 			("init.templateDir", po::value<fs::path>(), "The location of the template directory for repository initialization")
 			("core.bare", po::value<bool>(), "The location of the template directory for repository initialization")
 			;

@@ -6,7 +6,7 @@
 #include "merge.h"
 #include "tree.h"
 
-void merge_tree_into_index(const fs::path& index_file, const std::string& tree_id)
+void merge_tree_into_index(const Repository& repo, const fs::path& index_file, const std::string& tree_id)
 {
 	assert(false);
 // 	std::ofstream out_stream;
@@ -69,11 +69,11 @@ void merge_tree_into_index(const fs::path& index_file, const std::string& tree_i
 
 
 
-std::string merge_tree(const std::string& tree1_id, const std::string& tree2_id)
+std::string merge_tree(const Repository& repo, const std::string& tree1_id, const std::string& tree2_id)
 {
 	assert(false);
 	return "";
-// 	ObjectWriter new_tree("tree");
+// 	ObjectWriter new_tree(repo, "tree");
 // 	std::ifstream tree1_in, tree2_in;
 // 
 // 	if (Filesystem::open_object(tree1_id, tree1_in) != "tree")

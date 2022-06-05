@@ -23,11 +23,6 @@ std::string get_username()
 		return {};
 }
 
-std::string get_default_git_editor()
-{
-	return "vi";
-}
-
 fs::path get_home_directory()
 {
 	struct passwd *pw = getpwuid(getuid());

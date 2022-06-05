@@ -12,7 +12,7 @@ struct UserInfo
 	std::string email;
 };
 
-std::ostream&	operator<<(std::ostream& out_stream, const UserInfo& user);
+std::ostream& operator<<(std::ostream& out_stream, const UserInfo& user);
 
 struct Commit
 {
@@ -39,6 +39,7 @@ protected:
 	CommitReader(const ObjectData& data, const Object& object) : ObjectReader(data, object) {}
 };
 
-std::string		write_commit(const Commit& commit);
+std::string		write_commit(const Repository& repo, const Commit& commit);
+std::string		get_commit_message(const Repository& repo, const std::string& init = {});
 
 std::ostream&	operator<<(std::ostream& out_stream, const Commit& commit);

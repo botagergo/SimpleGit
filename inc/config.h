@@ -15,7 +15,7 @@ public:
 
 	~Config() { write(); }
 
-	static Config create(std::initializer_list<fs::path> configs, int flags=0);
+	static Config create(std::initializer_list<fs::path> configs);
 
 	template <typename T> T get(const std::string& name) const {
 		T value;
@@ -57,6 +57,7 @@ private:
 
 	static po::variables_map		read(const fs::path& config_file, const po::options_description& cfg_od);
 	static void						write(const fs::path& config_file, const po::variables_map& params);
+	static void						merge_variables_map(po::variables_map& dest, const po::variables_map& src);
 
 	std::map<fs::path, std::optional<po::variables_map>> data;
 };

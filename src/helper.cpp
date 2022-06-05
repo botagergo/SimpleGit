@@ -111,29 +111,9 @@ std::string get_git_editor()
 	return get_default_git_editor();
 }
 
-std::string get_commit_message(const std::string& init)
+std::string get_default_git_editor()
 {
-	Filesystem::write_content(Globals::CommitMessageTmpFile, init + "\n" + Globals::CommitMessagePromptString, Filesystem::FILE_FLAG_OVERWRITE);
-
-	std::ostringstream cmd;
-	cmd << Globals::EditorCommand  << " " << Globals::CommitMessageTmpFile;
-
-	if (boost::process::system(cmd.str().c_str()) != 0)
-		throw Exception(boost::format("error executing command: %1%") % cmd.str());
-
-	std::vector<std::string> lines = Filesystem::read_lines(Globals::CommitMessageTmpFile);
-	std::ostringstream msg;
-
-	for (std::string line : lines)
-	{
-		boost::algorithm::trim(line);
-		if (!line.empty() && line[0] != '#')
-			msg << line << '\n';
-	}
-
-	std::string ret = msg.str();
-	boost::algorithm::trim(ret);
-	return ret;
+	return "vi";
 }
 
 void check_error_code(const boost::system::error_code& ec, const std::string& arg)
@@ -155,14 +135,5 @@ void check_error_code(const std::error_code& ec, const std::string& arg)
 		if (!arg.empty())
 			msg += ": " + arg;
 		throw Exception(msg);
-	}
-}
-
-void merge_variables_map(po::variables_map& dest, const po::variables_map& src)
-{
-	for (auto it = src.begin(); it != src.end(); it++)
-	{
-		//dest.erase(it->first);
-		dest.insert_or_assign(it->first, it->second);
 	}
 }

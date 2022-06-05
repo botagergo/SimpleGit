@@ -126,19 +126,6 @@ namespace Filesystem
 			out_stream << line << '\n';
 	}
 
-	fs::path get_object_path(const std::string& id)
-	{
-		fs::path dir = get_object_dir(id);
-		fs::path filename = id.substr(Globals::IdPrefixLength);
-		return dir / filename;
-	}
-
-	fs::path get_object_dir(const std::string& id)
-	{
-		fs::path prefix = id.substr(0, Globals::IdPrefixLength);
-		return Globals::ObjectDir / prefix;
-	}
-
 	bool is_prefix(const fs::path& prefix, const fs::path& path)
 	{
 		auto res = std::mismatch(prefix.begin(), prefix.end(), path.begin());

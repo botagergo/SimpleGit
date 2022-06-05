@@ -53,10 +53,10 @@ protected:
 
 // creates a new tree from the current index
 // ignore_missing	-	adds blob to the tree even if it doesn't exist
-std::string write_tree(const fs::path& prefix = "", bool ignore_missing = false);
+std::string write_tree(const Repository& repo, const fs::path& prefix = "", bool ignore_missing = false);
 
 // creates a new tree from the given tree records
-std::string	write_tree(const std::vector<TreeRecord>& records);
+std::string	write_tree(const Repository& repo, const std::vector<TreeRecord>& records);
 
 // reads a tree into the working directory
-void		read_tree(const std::string& tree_id, const fs::path& root_dir = "");
+void		read_tree(const Repository& repo, const std::string& tree_id, const fs::path& root_dir = "");

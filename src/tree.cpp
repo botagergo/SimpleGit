@@ -11,6 +11,7 @@
 #include "helper.h"
 #include "index.h"
 #include "object.h"
+#include "repository.h"
 #include "tree.h"
 
 
@@ -29,7 +30,7 @@ std::istream& operator>>(std::istream& istream, TreeRecord& record)
 	return ret;
 }
 
-std::string write_tree(const fs::path& prefix, bool ignore_missing)
+std::string write_tree(const Repository& repo, const fs::path& prefix, bool ignore_missing)
 {
 	std::string ret_id;
 
@@ -47,7 +48,7 @@ std::string write_tree(const fs::path& prefix, bool ignore_missing)
 		if (history.size() <= curr_level)
 			history.resize(curr_level + 1);
 
-		if (!ignore_missing && !Object(record.id).exists())
+		if (!ignore_missing && !Object(repo, record.id).exists())
 			throw ObjectNotFoundException(record.id);
 
 		history[curr_level].push_back(TreeRecord("blob", "100644", record.id, record.path));
@@ -56,7 +57,7 @@ std::string write_tree(const fs::path& prefix, bool ignore_missing)
 		{
 			record.path = record.path.parent_path();
 
-			std::string id = write_tree(history[curr_level]);
+			std::string id = write_tree(repo, history[curr_level]);
 			history[curr_level].clear();
 
 			curr_level--;
@@ -66,9 +67,9 @@ std::string write_tree(const fs::path& prefix, bool ignore_missing)
 		}
 	};
 
-	std::ifstream index_in_stream(Globals::IndexFile.string());
+	std::ifstream index_in_stream(repo.indexFile.string());
 	if (!index_in_stream)
-		throw IndexFileNotFoundException();
+		throw IndexFileNotFoundException(repo.indexFile);
 
 	IndexRecord record;
 	IndexRecord prev_record;
@@ -97,7 +98,7 @@ std::string write_tree(const fs::path& prefix, bool ignore_missing)
 	}
 
 	create_index_objects(prev_record, 0, history);
-	std::string root_id = write_tree(history[0]);
+	std::string root_id = write_tree(repo, history[0]);
 
 	if (!ret_id.empty())
 		return ret_id;
@@ -105,9 +106,9 @@ std::string write_tree(const fs::path& prefix, bool ignore_missing)
 		return root_id;
 }
 
-std::string write_tree(const std::vector<TreeRecord>& records)
+std::string write_tree(const Repository& repo, const std::vector<TreeRecord>& records)
 {
-	ObjectWriter writer("tree");
+	ObjectWriter writer(repo, "tree");
 
 	for (const TreeRecord& record : records)
 	{
@@ -122,17 +123,17 @@ std::string write_tree(const std::vector<TreeRecord>& records)
 	return writer.save();
 }
 
-void read_tree(const std::string& tree_id, const fs::path& root_dir)
+void read_tree(const Repository& repo, const std::string& tree_id, const fs::path& root_dir)
 {
-	auto tree_reader = Object(tree_id).get_tree_reader();
+	auto tree_reader = Object(repo, tree_id).get_tree_reader();
 
 	TreeRecord record;
 	while (*tree_reader >> record)
 	{
 		if (record.kind == "blob")
-			read_blob(record.id, root_dir / record.path);
+			read_blob(repo, record.id, root_dir / record.path);
 		else if (record.kind == "tree")
-			read_tree(record.id, root_dir);
+			read_tree(repo, record.id, root_dir);
 		else
 			throw Exception(boost::format("invalid tree record kind: ") % record.kind);
 	}

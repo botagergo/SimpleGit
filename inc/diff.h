@@ -28,7 +28,7 @@ private:
 
 // returns true if the path in the record doesn't exist 
 // or the content of the path is different from the object in the record
-bool		has_diff(const IndexRecord& record);
+bool		has_diff(const Repository& repo, const IndexRecord& record);
 
-void		diff_tree(const std::string& tree1_id, const std::string& tree2_id);
-void		diff_index(const fs::path& index_file, const std::vector<fs::path>& files);
+void		diff_tree(const Repository& repo, const std::string& tree1_id, const std::string& tree2_id);
+void		diff_index(const Repository& repo, const fs::path& index_file, const std::vector<fs::path>& files);

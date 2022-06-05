@@ -3,6 +3,8 @@
 #include <iostream>
 #include <sstream>
 
+#include <boost/process.hpp>
+
 #include "branch.h"
 #include "commit.h"
 #include "error.h"
@@ -11,6 +13,7 @@
 #include "globals.h"
 #include "helper.h"
 #include "object.h"
+#include "repository.h"
 
 std::ostream&	operator<<(std::ostream& out_stream, const UserInfo& user)
 {
@@ -96,9 +99,9 @@ Commit CommitReader::read_commit()
 	}
 }
 
-std::string write_commit(const Commit& commit)
+std::string write_commit(const Repository& repo, const Commit& commit)
 {
-	ObjectWriter writer("commit");
+	ObjectWriter writer(repo, "commit");
 
 	writer << "tree " << commit.tree_id << '\n';
 	for (const std::string& parent : commit.parents)
@@ -108,6 +111,31 @@ std::string write_commit(const Commit& commit)
 	writer << commit.message;
 
 	return writer.save();
+}
+
+std::string get_commit_message(const Repository& repo, const std::string& init)
+{
+	Filesystem::write_content(repo.commitMessageTmpFile, init + "\n" + Repository::commitMessagePromptString, Filesystem::FILE_FLAG_OVERWRITE);
+
+	std::ostringstream cmd;
+	cmd << Globals::EditorCommand  << " " << repo.commitMessageTmpFile;
+
+	if (boost::process::system(cmd.str().c_str()) != 0)
+		throw Exception(boost::format("error executing command: %1%") % cmd.str());
+
+	std::vector<std::string> lines = Filesystem::read_lines(repo.commitMessageTmpFile);
+	std::ostringstream msg;
+
+	for (std::string line : lines)
+	{
+		boost::algorithm::trim(line);
+		if (!line.empty() && line[0] != '#')
+			msg << line << '\n';
+	}
+
+	std::string ret = msg.str();
+	boost::algorithm::trim(ret);
+	return ret;
 }
 
 std::ostream& operator<< (std::ostream& out_stream, const Commit& commit)

@@ -9,6 +9,7 @@
 #include "filesystem.h"
 #include "helper.h"
 #include "object.h"
+#include "repository.h"
 #include "tree.h"
 #include <zlib.h>
 
@@ -81,17 +82,17 @@ std::string ObjectWriter::save()
 
 	char* buf_start = _buf.str() + Globals::MaxObjectHeaderSize - header.str().size();
 	strcpy(buf_start, header.str().c_str());
-	write_object(Globals::ObjectTmpFile.c_str(), buf_start, _buf.content_length() + header.str().size());
+	write_object(_repo.objectTmpFile.c_str(), buf_start, _buf.content_length() + header.str().size());
 
 	_id = get_hash(buf_start, _buf.content_length() + header.str().size());
 
 	// we check if the object already exists, it will throw exception when we try to overwrite otherwise
-	if (Object(_id).exists())
+	if (Object(_repo, _id).exists())
 		return _id;
 
-	Filesystem::create_directory(Filesystem::get_object_dir(_id), Filesystem::FILE_FLAG_RECURSIVE);
-	std::string object_file = Filesystem::get_object_path(_id).string();
-	fs::copy(Globals::ObjectTmpFile, object_file);
+	Filesystem::create_directory(get_object_dir(_repo, _id), Filesystem::FILE_FLAG_RECURSIVE);
+	std::string object_file = get_object_path(_repo, _id).string();
+	fs::copy(_repo.objectTmpFile, object_file);
 	Filesystem::set_hidden(object_file.c_str());
 
 	_saved = true;
@@ -102,6 +103,20 @@ std::string ObjectWriter::id() const
 {
 	return _id;
 }
+
+fs::path get_object_path(const Repository& repo, const std::string& id)
+{
+	fs::path dir = get_object_dir(repo, id);
+	fs::path filename = id.substr(Globals::IdPrefixLength);
+	return dir / filename;
+}
+
+fs::path get_object_dir(const Repository& repo, const std::string& id)
+{
+	fs::path prefix = id.substr(0, Globals::IdPrefixLength);
+	return repo.objectDir / prefix;
+}
+
 
 std::string Object::kind() const
 {
@@ -130,6 +145,28 @@ std::unique_ptr<ObjectReader> Object::get_reader() const
 		return std::unique_ptr<ObjectReader>((ObjectReader*)(new CommitReader(data, *this)));
 	else
 		throw Exception(boost::format("invalid object kind: %1%") % data.kind);
+}
+
+ObjectWriterStreambuf::ObjectWriterStreambuf()
+{
+	_buf = (char*)malloc(_start_len);
+	setp(_buf + Globals::MaxObjectHeaderSize, _buf + _start_len - Globals::MaxObjectHeaderSize);
+}
+
+uint64_t ObjectWriterStreambuf::content_length() const
+{
+	return pptr() - _buf - Globals::MaxObjectHeaderSize;
+}
+
+char* ObjectWriterStreambuf::str()
+{
+	*pptr() = 0;
+	return _buf;
+}
+
+ObjectWriterStreambuf::~ObjectWriterStreambuf()
+{
+	free(_buf);
 }
 
 std::unique_ptr<BlobReader> Object::get_blob_reader() const

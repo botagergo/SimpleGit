@@ -67,33 +67,11 @@ void at_least_one_required(const po::variables_map& vm, const std::vector<std::s
 
 void init_for_git_commands(const po::variables_map& vm, fs::path root_dir=fs::path())
 {
-	const char* git_dir_env = std::getenv("GIT_DIR");
-	if (git_dir_env)
-	{
-		Globals::GitDir = git_dir_env;
-		if (!is_git_dir(Globals::GitDir))
-    	{
-			throw Exception(boost::format("not a git repository: ")
-        		% Globals::GitDir);
-		}
-	}
-	else
-	{
-		Globals::GitDir = find_git_dir(fs::current_path());
-		if (Globals::GitDir == fs::path())
-		{
-			throw Exception(boost::format("not a git repository (or any of the parent directories): ")
-        		% Globals::GitDir);
-		}
-	}
-
-	Globals::init();
-
 	if (vm.count("verbose"))
 		Globals::Verbose = true;
 }
 
-fs::path get_template_dir(const po::variables_map& vm_cmdline, const Config& config)
+fs::path get_template_dir(const Repository& repo, const po::variables_map& vm_cmdline, const Config& config)
 {
 	fs::path template_dir;
 	const char* template_dir_env;
@@ -103,25 +81,14 @@ fs::path get_template_dir(const po::variables_map& vm_cmdline, const Config& con
 	else if (template_dir_env = std::getenv("GIT_TEMPLATE_DIR"))
 		template_dir = template_dir_env;
 	else if (!config.try_get("init.templateDir", template_dir))
-		template_dir = Globals::DefaultTemplateDir;
+		template_dir = repo.defaultTemplateDir;
 
 	return template_dir;
 }
 
-void initGit(fs::path root_dir=fs::path())
+ArgType get_arg_type(const Repository& repo, const std::string& arg)
 {
-	if (root_dir == fs::path())
-		root_dir = find_git_dir(fs::current_path());
-
-	if (root_dir == fs::path())
-		throw Exception("not a git repository");
-
-	Globals::init();
-}
-
-ArgType get_arg_type(const std::string& arg)
-{
-	if (try_resolve(arg))
+	if (try_resolve(repo, arg))
 	{
 		if (fs::exists(arg))
 			throw AmbiguousArgumentException(arg);
@@ -132,6 +99,16 @@ ArgType get_arg_type(const std::string& arg)
 		return ArgType::Path;
 	else
 		throw InvalidArgumentException(arg);
+}
+
+Config create_config(const Repository& repo)
+{
+	return Config::create({repo.repositoryConfigFile, repo.userConfigFile, repo.systemConfigFile});
+}
+
+Config init_config(const Repository& repo)
+{
+	return Config::create({repo.repositoryConfigFile, repo.userConfigFile, repo.systemConfigFile});
 }
 
 void cmd_init(int argc, char* argv[])
@@ -181,7 +158,7 @@ void cmd_init(int argc, char* argv[])
 
 	if (vm.count("directory"))
 	{
-		git_dir =  bare ? vm["directory"].as<fs::path>() : vm["directory"].as<fs::path>() / Globals::DefaultGitDirName;
+		git_dir =  bare ? vm["directory"].as<fs::path>() : vm["directory"].as<fs::path>() / Repository::defaultGitDirName;
 	}
 	else if (git_dir_env = std::getenv("GIT_DIR"))
 	{
@@ -190,7 +167,7 @@ void cmd_init(int argc, char* argv[])
 	}
 	else
 	{
-		git_dir = bare ? fs::current_path() : fs::current_path() / Globals::DefaultGitDirName;
+		git_dir = bare ? fs::current_path() : fs::current_path() / Repository::defaultGitDirName;
 	}
 
 	if (separate_git_dir)
@@ -203,23 +180,20 @@ void cmd_init(int argc, char* argv[])
 	}
 
 	Filesystem::create_directory(actual_git_dir, Filesystem::FILE_FLAG_RECURSIVE);
+	Repository repo = Repository::create(actual_git_dir, bare);
 
-	Globals::GitDir = actual_git_dir;
-	Globals::init();
+	Config config = create_config(repo);
+	fs::path template_dir = get_template_dir(repo, vm, config);
 
-	Config config = Config::create({Globals::RepositoryConfigFile}, Config::CREATE_IF_NOT_EXIST);
-	fs::path template_dir = get_template_dir(vm, config);
-
-	bool reinitialize = is_git_dir(Globals::GitDir);
-	init_git_dir(template_dir, reinitialize);
+	Repository::InitType init_type = repo.init(template_dir);
 
 	if (separate_git_dir)
-		write_git_dir_ref(fs::canonical(actual_git_dir), git_dir);
+		Repository::write_git_dir_ref(fs::canonical(actual_git_dir), git_dir);
 
-	if (reinitialize)
-		MESSAGE << "Reinitialized existing Git repository in " + fs::canonical(Globals::GitDir).string() << '\n';
-	else
-		MESSAGE << "Initialized empty Git repository in " + fs::canonical(Globals::GitDir).string() << '\n';
+	if (init_type == Repository::REINIT)
+		MESSAGE << "Reinitialized existing Git repository in " + fs::canonical(repo.gitDir).string() << '\n';
+	else // if (iint_type == Repository::INIT)
+		MESSAGE << "Initialized empty Git repository in " + fs::canonical(repo.gitDir).string() << '\n';
 }
 
 void cmd_add(int argc, char* argv[])
@@ -248,6 +222,7 @@ void cmd_add(int argc, char* argv[])
 	}
 
 	init_for_git_commands(vm);
+	Repository repo = Repository::create();
 
 	if (!vm.count("files"))
 		message("nothing specified, nothing added");
@@ -256,7 +231,7 @@ void cmd_add(int argc, char* argv[])
 		std::vector<fs::path> files = vm["files"].as<std::vector<fs::path>>();
 		std::sort(files.begin(), files.end());
 
-		update_index(files, UPDATE_INDEX_MODIFY | UPDATE_INDEX_ADD | UPDATE_INDEX_REMOVE_IF_DELETED);
+		update_index(repo, files, UPDATE_INDEX_MODIFY | UPDATE_INDEX_ADD | UPDATE_INDEX_REMOVE_IF_DELETED);
 	}
 }
 
@@ -300,7 +275,8 @@ void cmd_update_index(int argc, char* argv[])
 	if (vm.count("force-remove"))
 		flags = UPDATE_INDEX_FORCE_REMOVE;
 
-	update_index(vm["files"].as<std::vector<fs::path>>(), flags);
+	const Repository& repo = Repository::create();
+	update_index(repo, vm["files"].as<std::vector<fs::path>>(), flags);
 }
 
 void cmd_commit(int argc, char* argv[])
@@ -332,21 +308,21 @@ void cmd_commit(int argc, char* argv[])
 	conflicting_options(vm, "reuse-message", "message", "file");
 
 	init_for_git_commands(vm);
-
-	Config config = Config::create({Globals::RepositoryConfigFile});
+	Repository repo = Repository::create();
+	Config config = init_config(repo);
 
 	// can't commit if index is empty
-	if (IndexReader(Globals::IndexFile).end())
+	if (IndexReader(repo.indexFile).end())
 		throw Exception("no changes added to commit");
 
 	Commit commit;
 
 	if (vm.count("reuse-message"))
-		commit = Object(resolve_to_commit(vm["reuse-message"].as<std::string>())).get_commit_reader()->read_commit();
+		commit = Object(repo, resolve_to_commit(repo, vm["reuse-message"].as<std::string>())).get_commit_reader()->read_commit();
 	else if (vm.count("reedit-message"))
 	{
-		commit = Object(resolve_to_commit(vm["reedit-message"].as<std::string>())).get_commit_reader()->read_commit();
-		commit.message = get_commit_message(commit.message);
+		commit = Object(repo, resolve_to_commit(repo, vm["reedit-message"].as<std::string>())).get_commit_reader()->read_commit();
+		commit.message = get_commit_message(repo, commit.message);
 	}
 	else
 	{
@@ -365,71 +341,78 @@ void cmd_commit(int argc, char* argv[])
 		else if (vm.count("file"))
 			commit.message = Filesystem::read_content(vm["file"].as<std::string>());
 		else
-			commit.message = get_commit_message();
+			commit.message = get_commit_message(repo);
 	}
 
 	if (commit.message.empty())
 		throw Exception("Aborting commit due to empty commit message.");
 
-	if (vm.count("all") && fs::exists(Globals::IndexFile))
+	if (vm.count("all") && fs::exists(repo.indexFile))
 	{
 		std::ifstream index_in;
-		Filesystem::open(Globals::IndexFile, index_in);
+		Filesystem::open(repo.indexFile, index_in);
 		IndexRecord record;
 		std::vector<fs::path> files_to_add;
 
 		while (index_in >> record)
 		{
-			if (has_diff(record))
+			if (has_diff(repo, record))
 				files_to_add.push_back(record.path);
 		}
 
 		if (files_to_add.size())
-			update_index(files_to_add, UPDATE_INDEX_MODIFY | UPDATE_INDEX_REMOVE_IF_DELETED);
+			update_index(repo, files_to_add, UPDATE_INDEX_MODIFY | UPDATE_INDEX_REMOVE_IF_DELETED);
 	}
 
-	commit.tree_id = write_tree();
+	commit.tree_id = write_tree(repo);
 
-	bool head_exists = fs::exists(Globals::HeadFile);
+	std::cout << commit.tree_id << std::endl;
+
+	bool head_exists = fs::exists(repo.headFile);
 
 	// check if there have been any changes
 	// TODO: rewrite it using diff
-	if (head_exists && Object(resolve_head()).get_commit_reader()->read_commit().tree_id == commit.tree_id)
+	if (head_exists && Object(repo, resolve_head(repo)).get_commit_reader()->read_commit().tree_id == commit.tree_id)
 		throw Exception("no changes added to commit");
+
+	std::cout << "1" << std::endl;
 
 	std::string one_line_commit_message = commit.message;
 	std::replace(one_line_commit_message.begin(), one_line_commit_message.end(), '\n', ' ');
+
+	std::cout << "2" << std::endl;
 
 	bool not_detached = true;
 	std::string head;
 
 	if (head_exists)
 	{
-		head = Filesystem::read_content(Globals::HeadFile);
-		not_detached = is_branch(head);
+		head = Filesystem::read_content(repo.headFile);
+		not_detached = is_branch(repo, head);
 		if (not_detached)
-			commit.parents = { resolve_branch(head) };
+			commit.parents = std::vector({resolve_branch(repo, head)});
 		else
-			commit.parents = { head }; // head is detached
+			commit.parents = std::vector({head}); // head is detached
 	}
 
 	std::cout << commit.tree_id << std::endl;
-	std::string commit_id = write_commit(commit);
+	std::string commit_id = write_commit(repo, commit);
+	std::cout << "3" << std::endl;
 
 	if (head_exists && not_detached)
 	{
-		write_branch(head, commit_id, Filesystem::FILE_FLAG_OVERWRITE);
+		write_branch(repo, head, commit_id, Filesystem::FILE_FLAG_OVERWRITE);
 		std::cout << boost::format("[%1% %2%] %3%") % head % commit_id % one_line_commit_message << '\n';
 	}
 	else if (!head_exists)
 	{
-		write_branch("master", commit_id, Filesystem::FILE_FLAG_OVERWRITE);
-		write_head("master");
+		write_branch(repo, "master", commit_id, Filesystem::FILE_FLAG_OVERWRITE);
+		write_head(repo, "master");
 		std::cout << boost::format("[master (root-commit) %1%] %2%") % commit_id % one_line_commit_message << '\n';
 	}
 	else if (!not_detached)
 	{
-		write_head(commit_id);
+		write_head(repo, commit_id);
 		std::cout << boost::format("[detached HEAD %1%] %2%") % commit_id % one_line_commit_message << '\n';
 	}
 }
@@ -504,21 +487,22 @@ void cmd_tag(int argc, char* argv[])
 	}
 
 	init_for_git_commands(vm);
+	Repository repo = Repository::create();
 
 	if (vm.count("list"))
 	{
-		list_tags();
+		list_tags(repo);
 	}
 	if (vm.count("delete"))
 	{
-		delete_tag(vm["tagname"].as<std::string>());
+		delete_tag(repo, vm["tagname"].as<std::string>());
 
 	}
 	else if (vm.count("tagname"))
 	{
 		int flags = vm.count("force") ? Filesystem::FILE_FLAG_OVERWRITE : 0;
-		std::string commit = vm.count("commit") ? resolve_ref(vm["commit"].as<std::string>()) : resolve_head();
-		write_tag(vm["tagname"].as<std::string>(), commit, flags);
+		std::string commit = vm.count("commit") ? resolve_ref(repo, vm["commit"].as<std::string>()) : resolve_head(repo);
+		write_tag(repo, vm["tagname"].as<std::string>(), commit, flags);
 	}
 }
 
@@ -547,6 +531,7 @@ void cmd_read_tree(int argc, char* argv[])
 	}
 
 	init_for_git_commands(vm);
+	Repository repo = Repository::create();
 
 	if (!vm.count("tree-ish"))
 		error("expected tree id");
@@ -555,16 +540,16 @@ void cmd_read_tree(int argc, char* argv[])
 	{
 		std::vector<std::string> tree_ish = vm["tree-ish"].as<std::vector<std::string>>();
 		if (tree_ish.size() == 1)
-			read_tree_into_index(Globals::IndexFile, tree_ish[0]);
+			read_tree_into_index(repo, repo.indexFile, tree_ish[0]);
 		if (tree_ish.size() == 2)
-			read_tree_into_index(Globals::IndexFile,
-				resolve_to_tree(tree_ish[0]),
-				resolve_to_tree(tree_ish[1]));
+			read_tree_into_index(repo, repo.indexFile,
+				resolve_to_tree(repo, tree_ish[0]),
+				resolve_to_tree(repo, tree_ish[1]));
 		else
 			;
 	}
 	else
-		resolve_to_tree(vm["tree-ish"].as<std::vector<std::string>>()[0]);
+		resolve_to_tree(repo, vm["tree-ish"].as<std::vector<std::string>>()[0]);
 }
 
 void cmd_write_tree(int argc, char* argv[])
@@ -591,11 +576,12 @@ void cmd_write_tree(int argc, char* argv[])
 	}
 
 	init_for_git_commands(vm);
+	Repository repo = Repository::create();
 
 	fs::path prefix = vm.count("prefix") ? vm["prefix"].as<fs::path>() : "";
 	bool ignore_missing = vm.count("missing-ok");
 
-	std::cout << write_tree(prefix, ignore_missing) << '\n';
+	std::cout << write_tree(repo, prefix, ignore_missing) << '\n';
 }
 
 void cmd_branch(int argc, char* argv[])
@@ -706,30 +692,31 @@ void cmd_branch(int argc, char* argv[])
 	}
 
 	init_for_git_commands(vm);
+	Repository repo = Repository::create();
 
 	int flags = vm.count("force") ? Filesystem::FILE_FLAG_OVERWRITE : 0;
 
 	if (vm.count("list"))
 	{
-		list_branches();
+		list_branches(repo);
 	}
 	else if (vm.count("delete"))
 	{
 		for (const std::string& branch : vm["branchname"].as<std::vector<std::string>>())
-			delete_branch(branch, flags);
+			delete_branch(repo, branch, flags);
 	}
 	else if (vm.count("move"))
 	{
-		move_branch(vm["oldbranch"].as<std::string>(), vm["newbranch"].as<std::string>(), flags);
+		move_branch(repo, vm["oldbranch"].as<std::string>(), vm["newbranch"].as<std::string>(), flags);
 	}
 	else if (vm.count("copy"))
 	{
-		copy_branch(vm["oldbranch"].as<std::string>(), vm["newbranch"].as<std::string>(), flags);
+		copy_branch(repo, vm["oldbranch"].as<std::string>(), vm["newbranch"].as<std::string>(), flags);
 	}
 	else if (vm.count("branchname"))
 	{
-		std::string commit = vm.count("start-point") ? resolve_ref(vm["commit"].as<std::string>()) : resolve_head();
-		write_branch(vm["branchname"].as<std::string>(), commit, flags);
+		std::string commit = vm.count("start-point") ? resolve_ref(repo, vm["commit"].as<std::string>()) : resolve_head(repo);
+		write_branch(repo, vm["branchname"].as<std::string>(), commit, flags);
 	}
 }
 
@@ -762,14 +749,15 @@ void cmd_checkout(int argc, char* argv[])
 	}
 
 	init_for_git_commands(vm);
+	Repository repo = Repository::create();
 
 	if (!vm.count("commit-id"))
 		error("expected commit id");
 
 	const std::string name = vm["commit-id"].as<std::string>();
-	std::string commit_id = resolve_branch(name);
-	checkout(commit_id);
-	write_head(name);
+	std::string commit_id = resolve_branch(repo, name);
+	checkout(repo, commit_id);
+	write_head(repo, name);
 }
 
 void cmd_merge(int argc, char* argv[])
@@ -807,15 +795,16 @@ void cmd_cat_file(int argc, char* argv[])
 	at_least_one_required(vm, { "-t", "-p", "-s"});
 
 	init_for_git_commands(vm);
+	Repository repo = Repository::create();
 
-	const std::string object_id = resolve_ref(vm["object"].as<std::string>());
+	const std::string object_id = resolve_ref(repo, vm["object"].as<std::string>());
 
 	if (vm.count("-t"))
-		std::cout << Object(object_id).kind() << '\n';
+		std::cout << Object(repo, object_id).kind() << '\n';
 	else if (vm.count("-s"))
-		std::cout << Object(object_id).size() << '\n';
+		std::cout << Object(repo, object_id).size() << '\n';
 	else if (vm.count("-p"))
-		Object(object_id).get_reader()->pretty_print(std::cout);
+		Object(repo, object_id).get_reader()->pretty_print(std::cout);
 }
 
 void cmd_ls_files(int argc, char* argv[])
@@ -840,12 +829,13 @@ void cmd_ls_files(int argc, char* argv[])
 	}
 
 	init_for_git_commands(vm);
+	Repository repo = Repository::create();
 
-	if (!fs::exists(Globals::IndexFile))
+	if (!fs::exists(repo.indexFile))
 		return;
 
 	std::ifstream in_stream;
-	Filesystem::open(Globals::IndexFile, in_stream);
+	Filesystem::open(repo.indexFile, in_stream);
 
 	IndexRecord record;
 	while (in_stream >> record)
@@ -879,6 +869,7 @@ void cmd_config(int argc, char* argv[])
 	}
 
 	init_for_git_commands(vm);
+	Repository repo = Repository::create();
 
 	po::variables_map vm_config;
 	const po::options_description& config_desc = Config::get_config_description();
@@ -887,8 +878,8 @@ void cmd_config(int argc, char* argv[])
 		.positional(po::positional_options_description()).run(), vm_config);
 	po::notify(vm_config);
 
-	Config config = Config::create({Globals::RepositoryConfigFile});
-	config.set(Globals::RepositoryConfigFile, vm_config);
+	Config config = init_config(repo);
+	config.set(repo.repositoryConfigFile, vm_config);
 }
 
 void cmd_diff(int argc, char* argv[])
@@ -912,6 +903,7 @@ void cmd_diff(int argc, char* argv[])
 	po::notify(vm);
 
 	init_for_git_commands(vm);
+	Repository repo = Repository::create();
 
 	std::vector<std::string> args = vm.count("args") ? vm["args"].as<std::vector<std::string>>() : std::vector<std::string>();
 	std::vector<std::string> refs, paths;
@@ -926,10 +918,10 @@ void cmd_diff(int argc, char* argv[])
 	{
 		int i;
 
-		for(i = 0; i < args.size() && get_arg_type(args[i]) == ArgType::Ref; i++)
+		for(i = 0; i < args.size() && get_arg_type(repo, args[i]) == ArgType::Ref; i++)
 			refs.push_back(args[i]);
 
-		for(; i < args.size() && get_arg_type(args[i]) == ArgType::Path; i++)
+		for(; i < args.size() && get_arg_type(repo, args[i]) == ArgType::Path; i++)
 			paths.push_back(args[i]);
 
 		if (i < args.size())
@@ -937,18 +929,18 @@ void cmd_diff(int argc, char* argv[])
 	}
 
 	std::string id1, id2;
-	if (refs.size() == 2 && try_resolve_to_tree(refs[0], id1) && try_resolve_to_tree(refs[1], id2))
-		return diff_tree(id1, id2);
-	else if (refs.size() == 2 && try_resolve_to_blob(refs[0], id1) && try_resolve_to_blob(refs[1], id2))
+	if (refs.size() == 2 && try_resolve_to_tree(repo, refs[0], id1) && try_resolve_to_tree(repo, refs[1], id2))
+		return diff_tree(repo, id1, id2);
+	else if (refs.size() == 2 && try_resolve_to_blob(repo, refs[0], id1) && try_resolve_to_blob(repo, refs[1], id2))
 	{
-		Diff d(Object(id1).get_blob_reader()->read_lines(),
-		Object(id2).get_blob_reader()->read_lines());
+		Diff d(Object(repo, id1).get_blob_reader()->read_lines(),
+		Object(repo, id2).get_blob_reader()->read_lines());
 
 		d.calculate();
 		d.print();
 	}
 	else if (refs.size() == 0 && paths.size() >= 1)
-		diff_index(Globals::IndexFile, std::vector<fs::path>(args.begin(), args.end()));
+		diff_index(repo, repo.indexFile, std::vector<fs::path>(args.begin(), args.end()));
 	else
 		error("invalid combination of positional arguments");
 }
@@ -986,16 +978,17 @@ void cmd_reset(int argc, char* argv[])
 	}
 
 	init_for_git_commands(vm);
+	Repository repo = Repository::create();
 
-	std::string commit_id = resolve_to_commit(vm["commit"].as<std::string>());
+	std::string commit_id = resolve_to_commit(repo, vm["commit"].as<std::string>());
 
 	bool keep_index = vm.count("soft");
 	bool keep_working_directory = !vm.count("hard");
 
-	checkout(commit_id, keep_working_directory, keep_index);
+	checkout(repo, commit_id, keep_working_directory, keep_index);
 
 	Commit commit;
-	*(Object(commit_id).get_commit_reader()) >> commit;
+	*(Object(repo, commit_id).get_commit_reader()) >> commit;
 
 	std::cout << "HEAD is now at " << commit_id << " " << commit.message << "\n";
 }
